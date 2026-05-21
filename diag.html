@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Космический Альянс — Диагностика</title>
+    <style>
+        body { margin:0; padding:16px; background:#0a0a1a; color:#0f0; font-family:monospace; font-size:14px; }
+        .ok { color:#0f0; } .err { color:#f44; } .warn { color:#ff0; } .info { color:#88f; }
+        #log { white-space:pre-wrap; line-height:1.6; }
+    </style>
+</head>
+<body>
+<div id="log"></div>
+<script>
+var log = document.getElementById('log');
+function add(msg, cls) {
+    var span = document.createElement('span');
+    span.className = cls || '';
+    span.textContent = msg + '\n';
+    log.appendChild(span);
+}
+
+function ok(msg) { add('✅ ' + msg, 'ok'); }
+function err(msg) { add('❌ ' + msg, 'err'); }
+function warn(msg) { add('⚠️ ' + msg, 'warn'); }
+function info(msg) { add('ℹ️ ' + msg, 'info'); }
+
+// Capture ALL errors
+var allErrors = [];
+var origError = window.onerror;
+window.onerror = function(msg, src, line, col, error) {
+    allErrors.push(msg + ' @ ' + src + ':' + line + ':' + col);
+    err('JS ERROR: ' + msg + ' @ ' + line + ':' + col);
+};
+window.addEventListener('unhandledrejection', function(e) {
+    allErrors.push('Promise: ' + e.reason);
+    err('PROMISE ERROR: ' + e.reason);
+});
+
+info('=== DIAGNOSTIC START ===');
+info('UA: ' + navigator.userAgent);
+info('Date: ' + new Date().toISOString());
+
+// Step 1: Check globals that might interfere with UMD
+add('');
+info('--- Step 1: Global scope check ---');
+info('typeof module: ' + typeof module);
+info('typeof exports: ' + typeof exports);
+info('typeof define: ' + typeof define);
+info('typeof globalThis: ' + typeof globalThis);
+info('typeof self: ' + typeof self);
+info('typeof window: ' + typeof window);
+
+// Step 2: Try static script tag
+add('');
+info('--- Step 2: Loading phaser.min.js via script tag ---');
+var s1 = document.createElement('script');
+s1.src = 'phaser.min.js';
+s1.onload = function() {
+    ok('phaser.min.js script tag onload fired');
+    checkPhaser('after static script tag onload');
+    tryXHR();
+};
+s1.onerror = function(e) {
+    err('phaser.min.js script tag onerror fired');
+    tryXHR();
+};
+document.head.appendChild(s1);
+
+function checkPhaser(label) {
+    var methods = {
+        'typeof Phaser': typeof Phaser,
+        'typeof window.Phaser': typeof window.Phaser,
+        'typeof globalThis.Phaser': typeof globalThis.Phaser,
+        'typeof self.Phaser': typeof self.Phaser,
+        "'Phaser' in window": 'Phaser' in window,
+        'window.hasOwnProperty("Phaser")': window.hasOwnProperty('Phaser')
+    };
+    for (var k in methods) {
+        add('  ' + k + ' = ' + methods[k], methods[k] !== 'undefined' ? 'ok' : 'err');
+    }
+    if (typeof Phaser !== 'undefined') {
+        ok('Phaser VERSION: ' + Phaser.VERSION);
+        ok('Phaser loaded at: ' + label);
+    } else {
+        err('Phaser is UNDEFINED at: ' + label);
+    }
+}
+
+function tryXHR() {
+    add('');
+    if (typeof Phaser !== 'undefined') {
+        ok('Phaser already loaded, skipping XHR test');
+        tryGameLoad();
+        return;
+    }
+    
+    info('--- Step 3: Loading phaser.min.js via XHR + eval ---');
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', 'phaser.min.js', true);
+    xhr.onload = function() {
+        ok('XHR loaded: ' + xhr.status + ' size: ' + xhr.responseText.length);
+        try {
+            (0, eval)(xhr.responseText);
+            ok('(0,eval)() completed');
+            checkPhaser('after XHR + (0,eval)()');
+        } catch(e) {
+            err('(0,eval)() FAILED: ' + e.message);
+        }
+        tryGameLoad();
+    };
+    xhr.onerror = function() {
+        err('XHR onerror');
+        tryGameLoad();
+    };
+    xhr.send();
+}
+
+function tryGameLoad() {
+    add('');
+    info('--- Step 4: Loading game.js ---');
+    if (typeof Phaser === 'undefined') {
+        err('CANNOT load game.js — Phaser is undefined!');
+        showFinalReport();
+        return;
+    }
+    var s2 = document.createElement('script');
+    s2.src = 'game.js';
+    s2.onload = function() {
+        ok('game.js loaded');
+        add('');
+        info('--- Step 5: Game state ---');
+        info('typeof gameInstance: ' + typeof gameInstance);
+        info('canvas count: ' + document.querySelectorAll('canvas').length);
+        var c = document.querySelector('canvas');
+        if (c) {
+            ok('Canvas: ' + c.width + 'x' + c.height);
+        } else {
+            err('No canvas found');
+        }
+        showFinalReport();
+    };
+    s2.onerror = function() {
+        err('game.js onerror');
+        showFinalReport();
+    };
+    document.body.appendChild(s2);
+}
+
+function showFinalReport() {
+    add('');
+    info('=== FINAL REPORT ===');
+    info('Phaser: ' + typeof Phaser);
+    info('gameInstance: ' + typeof gameInstance);
+    info('Errors: ' + (allErrors.length ? allErrors.join('; ') : 'none'));
+    info('Canvas: ' + document.querySelectorAll('canvas').length);
+    
+    if (typeof Phaser !== 'undefined' && typeof gameInstance !== 'undefined') {
+        ok('GAME SHOULD BE RUNNING');
+    } else if (typeof Phaser !== 'undefined') {
+        warn('Phaser loaded but game not created — game.js error?');
+    } else {
+        err('PHASER NOT LOADED — game cannot start');
+        add('');
+        info('Possible fixes:');
+        info('1. Your browser blocks eval() — check Content Security Policy');
+        info('2. Your browser blocks XHR synchronous mode');
+        info('3. Try a different browser (Chrome, Firefox, Safari)');
+    }
+}
+</script>
+</body>
+</html>
