@@ -28,18 +28,17 @@
 <body>
     <div id="bg-layer"></div>
     <div id="game-container"></div>
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
-    <script>
-    // Wait for Phaser to be available, then load game
-    (function waitForPhaser() {
-        if (typeof Phaser !== 'undefined') {
-            var s = document.createElement('script');
-            s.src = 'game.js';
-            document.body.appendChild(s);
-        } else {
-            setTimeout(waitForPhaser, 100);
-        }
-    })();
+    <script type="module">
+    // Load Phaser via ESM import — avoids UMD `this` binding issue on GitHub Pages
+    import('https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.esm.js').then(mod => {
+        window.Phaser = mod.Phaser || mod.default;
+        const s = document.createElement('script');
+        s.src = 'game.js';
+        document.body.appendChild(s);
+    }).catch(e => {
+        console.error('Failed to load Phaser:', e);
+        document.getElementById('game-container').innerHTML = '<p style="color:#fff;text-align:center;padding:2em">Ошибка загрузки Phaser. Пожалуйста, обновите страницу.</p>';
+    });
     </script>
 </body>
 </html>
