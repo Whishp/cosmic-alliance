@@ -1,3 +1,14 @@
+npm warn exec The following package was not found and will be installed: serve@14.2.6
  INFO  Accepting connections at http://localhost:3000
-
- INFO  Gracefully shutting down. Please wait...
+ HTTP  5/21/2026 12:11:09 PM ::1 GET /
+ HTTP  5/21/2026 12:11:09 PM ::1 Returned 200 in 340 ms
+ HTTP  5/21/2026 12:11:09 PM ::1 GET /style.css
+ HTTP  5/21/2026 12:11:09 PM ::1 Returned 200 in 18 ms
+ HTTP  5/21/2026 12:11:09 PM ::1 GET /game.js
+ HTTP  5/21/2026 12:11:09 PM ::1 Returned 200 in 4 ms
+ HTTP  5/21/2026 12:11:16 PM ::1 GET /
+ HTTP  5/21/2026 12:11:16 PM ::1 Returned 304 in 2 ms
+ HTTP  5/21/2026 12:11:16 PM ::1 GET /style.css
+ HTTP  5/21/2026 12:11:16 PM ::1 Returned 304 in 2 ms
+ HTTP  5/21/2026 12:11:16 PM ::1 GET /game.js
+ HTTP  5/21/2026 12:11:16 PM ::1 Returned 304 in 2 ms
