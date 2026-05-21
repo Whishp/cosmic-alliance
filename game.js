@@ -6,6 +6,7 @@ let leaderboard = null;
 const FONT_FAMILY = '"Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif';
 
 function formatNumber(num) {
+    if (!isFinite(num) || isNaN(num)) return 'INF';
     if (num < 1000) return num.toString();
     const suffixes = ["", "K", "M", "B", "T"];
     const suffixNum = Math.floor(("" + num).length / 3);
@@ -402,6 +403,8 @@ class MainScene extends Phaser.Scene {
     }
 
     create() {
+        this.scale.on('resize', this.handleResize, this);
+
         this.input.mouse.disableContextMenu();
         
         const width = this.cameras.main.width;
@@ -680,6 +683,71 @@ class MainScene extends Phaser.Scene {
             this.showTutorialOverlay();
         } else {
             this.checkOfflineIncome();
+        }
+
+        this.handleResize({ width: width, height: height });
+    }
+
+    handleResize(gameSize) {
+        const width = gameSize.width;
+        const height = gameSize.height;
+
+        let fontSize = '28px';
+        if (width <= 600) {
+            this.cellSize = Math.floor((width - 10) / 6);
+            this.gridOffsetY = Math.floor(height * 0.25);
+            fontSize = '16px';
+        } else {
+            this.cellSize = Math.min(125, Math.floor((width - 40) / 6), Math.floor((height - 500) / 6));
+            this.gridOffsetY = Math.floor(height * 0.30);
+        }
+
+        this.gridOffsetX = (width - (this.gridSize * this.cellSize)) / 2 + (this.cellSize / 2);
+
+        // Update score/high score texts positions
+        if (this.scoreText) {
+            this.scoreText.setPosition(20, this.cardY + 5);
+            this.scoreText.setFontSize(parseInt(fontSize));
+        }
+        if (this.highScoreText) {
+            this.highScoreText.setPosition(width - 20, this.cardY + 5);
+            this.highScoreText.setFontSize(parseInt(fontSize));
+        }
+        if (this.mergeCountText) {
+            this.mergeCountText.setPosition(width / 2, this.cardY + 20);
+            this.mergeCountText.setFontSize(parseInt(fontSize));
+        }
+        if (this.prestigeText) {
+            this.prestigeText.setPosition(20, this.cardY + 45);
+            this.prestigeText.setFontSize(parseInt(fontSize));
+        }
+
+        // Update grid sprites positions
+        if (this.grid) {
+            for (let r = 0; r < this.gridSize; r++) {
+                if (this.grid[r]) {
+                    for (let c = 0; c < this.gridSize; c++) {
+                        const cell = this.grid[r][c];
+                        if (cell && cell.sprite) {
+                            const nx = this.gridOffsetX + c * this.cellSize;
+                            const ny = this.gridOffsetY + r * this.cellSize;
+                            cell.sprite.setPosition(nx, ny);
+                            cell.sprite.setDisplaySize(this.cellSize - 4, this.cellSize - 4);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Update button positions
+        if (this.rewardedBtnContainer) {
+            this.rewardedBtnContainer.setPosition(width / 2, 215);
+        }
+        if (this.dailyChallengeBtn) {
+            this.dailyChallengeBtn.setPosition(width / 2, 270);
+        }
+        if (this.prestigeBtnObj) {
+            this.prestigeBtnObj.setPosition(width / 2, 330);
         }
     }
 
