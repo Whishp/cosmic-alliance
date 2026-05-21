@@ -3,14 +3,48 @@ let ysdk = null;
 let player = null;
 let leaderboard = null;
 
+const T = {
+    ru: {
+        title: 'КОСМИЧЕСКИЙ АЛЬЯНС',
+        score: 'СЧЕТ: ',
+        score_go: 'Счет: ',
+        highscore: 'РЕКОРД: ',
+        watch_ad: 'Смотреть рекламу: 2x Очки на 1 ход!',
+        game_over: 'ИГРА ОКОНЧЕНА',
+        play_again: 'ИГРАТЬ СНОВА'
+    },
+    en: {
+        title: 'COSMIC ALLIANCE',
+        score: 'SCORE: ',
+        score_go: 'Score: ',
+        highscore: 'BEST: ',
+        watch_ad: 'Watch Ad: 2x Points for 1 turn!',
+        game_over: 'GAME OVER',
+        play_again: 'PLAY AGAIN'
+    }
+};
+
+function getLang() {
+    return (ysdk && ysdk.environment && ysdk.environment.i18n && ysdk.environment.i18n.lang === 'en') ? 'en' : 'ru';
+}
+
 // Audio Manager (Web Audio API)
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let audioCtx = null;
 let isMuted = false;
 
 const SoundManager = {
+    initCtx: function() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    },
     playTone: function(frequency, type, duration, vol = 0.1) {
         if (isMuted) return;
-        if (audioCtx.state === 'suspended') audioCtx.resume();
+        this.initCtx();
+        if (!audioCtx) return;
         
         const oscillator = audioCtx.createOscillator();
         const gainNode = audioCtx.createGain();
@@ -44,7 +78,8 @@ const SoundManager = {
     
     playGameOver: function() {
         if (isMuted) return;
-        if (audioCtx.state === 'suspended') audioCtx.resume();
+        this.initCtx();
+        if (!audioCtx) return;
         
         const oscillator = audioCtx.createOscillator();
         const gainNode = audioCtx.createGain();
@@ -203,6 +238,8 @@ class BootScene extends Phaser.Scene {
         graphics.fillStyle(0xffffff, 1);
         graphics.fillCircle(8, 8, 8);
         graphics.generateTexture('particle', 16, 16);
+
+        graphics.destroy();
     }
 }
 
@@ -226,6 +263,7 @@ class MainScene extends Phaser.Scene {
         this.mergeCount = 0;
         this.doublePointsActive = false;
         this.rewardedBtn = null;
+        this.doublePointsTurns = 0;
     }
 
     create() {
@@ -234,8 +272,9 @@ class MainScene extends Phaser.Scene {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
         
+        this.cellSize = Math.min(110, Math.floor((width - 20) / 6), Math.floor((height - 380) / 6));
         this.gridOffsetX = (width - (this.gridSize * this.cellSize)) / 2 + (this.cellSize / 2);
-        this.gridOffsetY = 300;
+        this.gridOffsetY = Math.floor(height * 0.25);
 
         // Background starfield
         for (let i = 0; i < 100; i++) {
@@ -246,22 +285,63 @@ class MainScene extends Phaser.Scene {
         }
 
         // Top UI
-        this.add.text(width/2, 50, 'КОСМИЧЕСКИЙ АЛЬЯНС', { fontSize: '40px', fill: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        const l = getLang();
+        this.add.text(width/2, 50, T[l].title, { fontSize: '40px', fill: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
         
-        this.scoreText = this.add.text(20, 120, 'СЧЕТ: 0', { fontSize: '32px', fill: '#ffd700' });
+        this.scoreText = this.add.text(20, 120, T[l].score + '0', { fontSize: '32px', fill: '#ffd700' });
         
         // Try to load high score
         const savedScore = localStorage.getItem('cosmic_highscore');
         if (savedScore) this.highScore = parseInt(savedScore, 10);
-        this.highScoreText = this.add.text(width - 20, 120, 'РЕКОРД: ' + this.highScore, { fontSize: '32px', fill: '#aaa' }).setOrigin(1, 0);
+        this.highScoreText = this.add.text(width - 20, 120, T[l].highscore + this.highScore, { fontSize: '32px', fill: '#aaa' }).setOrigin(1, 0);
 
         // Try to load cloud save
         if (player) {
             player.getData(['score', 'highScore', 'grid']).then(data => {
                 if (data.highScore) {
                     this.highScore = data.highScore;
-                    this.highScoreText.setText('РЕКОРД: ' + this.highScore);
+                    this.highScoreText.setText(T[getLang()].highscore + this.highScore);
                     localStorage.setItem('cosmic_highscore', this.highScore.toString());
+                }
+                if (data.score) {
+                    this.score = data.score;
+                    this.scoreText.setText(T[getLang()].score + this.score);
+                }
+                if (data.grid && Array.isArray(data.grid) && data.grid.length === this.gridSize) {
+                    let valid = true;
+                    for (let r = 0; r < this.gridSize; r++) {
+                        if (!Array.isArray(data.grid[r]) || data.grid[r].length !== this.gridSize) {
+                            valid = false;
+                            break;
+                        }
+                        for (let c = 0; c < this.gridSize; c++) {
+                            const t = data.grid[r][c];
+                            if (typeof t !== 'number' || t < 0 || t > 7) {
+                                valid = false;
+                                break;
+                            }
+                        }
+                    }
+                    if (valid) {
+                        for (let r = 0; r < this.gridSize; r++) {
+                            for (let c = 0; c < this.gridSize; c++) {
+                                const cell = this.grid[r][c];
+                                if (cell.sprite) {
+                                    cell.sprite.destroy();
+                                    cell.sprite = null;
+                                }
+                                cell.tier = 0;
+                            }
+                        }
+                        for (let r = 0; r < this.gridSize; r++) {
+                            for (let c = 0; c < this.gridSize; c++) {
+                                const t = data.grid[r][c];
+                                if (t > 0) {
+                                    this.upgradeCell(r, c, t);
+                                }
+                            }
+                        }
+                    }
                 }
             }).catch(() => {
                 // Ignore error, fallback to localStorage
@@ -276,7 +356,7 @@ class MainScene extends Phaser.Scene {
         });
 
         // Rewarded Ad Button
-        this.rewardedBtn = this.add.text(width/2, 180, 'Смотреть рекламу: 2x Очки на 1 ход!', { 
+        this.rewardedBtn = this.add.text(width/2, 180, T[getLang()].watch_ad, {
             fontSize: '24px', 
             fill: '#000', 
             backgroundColor: '#00ffaa',
@@ -287,6 +367,15 @@ class MainScene extends Phaser.Scene {
 
         this.initGrid();
         
+        this.particleEmitter = this.add.particles('particle').createEmitter({
+            active: false,
+            speed: { min: 50, max: 150 },
+            angle: { min: 0, max: 360 },
+            scale: { start: 1, end: 0 },
+            blendMode: 'ADD',
+            lifespan: 500
+        });
+
         if (ysdk && ysdk.features.GameplayAPI) {
             ysdk.features.GameplayAPI.start();
         }
@@ -301,6 +390,7 @@ class MainScene extends Phaser.Scene {
                 },
                 onRewarded: () => {
                     this.doublePointsActive = true;
+                    this.doublePointsTurns = 1;
                     this.rewardedBtn.setVisible(false);
                 },
                 onClose: () => {
@@ -327,13 +417,7 @@ class MainScene extends Phaser.Scene {
 
     saveCloudData() {
         if (player) {
-            let gridData = [];
-            for(let r=0; r<this.gridSize; r++){
-                gridData[r] = [];
-                for(let c=0; c<this.gridSize; c++){
-                    gridData[r][c] = this.grid[r][c].tier;
-                }
-            }
+            let gridData = this.grid.map(row => row.map(c => c.tier));
             player.setData({
                 score: this.score,
                 highScore: this.highScore,
@@ -397,7 +481,7 @@ class MainScene extends Phaser.Scene {
 
         // Try merge
         const selCell = this.grid[this.selectedCell.row][this.selectedCell.col];
-        if (cell.tier > 0 && cell.tier === selCell.tier && (row !== this.selectedCell.row || col !== this.selectedCell.col)) {
+        if (cell.tier > 0 && cell.tier < 7 && cell.tier === selCell.tier && (row !== this.selectedCell.row || col !== this.selectedCell.col)) {
             // Merge!
             this.isProcessing = true;
             this.comboMultiplier = 1;
@@ -512,22 +596,10 @@ class MainScene extends Phaser.Scene {
     }
 
     spawnParticles(x, y, color) {
-        const particles = this.add.particles('particle');
-        const emitter = particles.createEmitter({
-            x: x,
-            y: y,
-            speed: { min: 50, max: 150 },
-            angle: { min: 0, max: 360 },
-            scale: { start: 1, end: 0 },
-            blendMode: 'ADD',
-            tint: color,
-            lifespan: 500,
-            quantity: 10
-        });
-        
-        this.time.delayedCall(500, () => {
-            particles.destroy();
-        });
+        if (!this.particleEmitter) return;
+        this.particleEmitter.setPosition(x, y);
+        this.particleEmitter.setTint(color);
+        this.particleEmitter.explode(10);
     }
 
     showFloatingText(x, y, text, color) {
@@ -593,9 +665,12 @@ class MainScene extends Phaser.Scene {
 
     endTurn() {
         // Reset double points if it was used (only lasts one turn/chain)
-        if (this.comboMultiplier === 1) {
-            this.doublePointsActive = false;
-            if (this.rewardedBtn) this.rewardedBtn.setVisible(true);
+        if (this.doublePointsActive) {
+            this.doublePointsTurns--;
+            if (this.doublePointsTurns <= 0) {
+                this.doublePointsActive = false;
+                if (this.rewardedBtn) this.rewardedBtn.setVisible(true);
+            }
         }
 
         // Spawn new items
@@ -607,12 +682,25 @@ class MainScene extends Phaser.Scene {
         
         this.saveCloudData();
 
-        if (this.getEmptyCells().length === 0) {
+        if (this.getEmptyCells().length === 0 && !this.hasPossibleMerges()) {
             this.gameOver();
             return;
         }
         
         this.isProcessing = false;
+    }
+
+    hasPossibleMerges() {
+        for (let r = 0; r < this.gridSize; r++) {
+            for (let c = 0; c < this.gridSize; c++) {
+                const cell = this.grid[r][c];
+                if (cell.tier > 0 && cell.tier < 7) {
+                    if (c < this.gridSize - 1 && this.grid[r][c+1].tier === cell.tier) return true;
+                    if (r < this.gridSize - 1 && this.grid[r+1][c].tier === cell.tier) return true;
+                }
+            }
+        }
+        return false;
     }
 
     getEmptyCells() {
@@ -645,10 +733,10 @@ class MainScene extends Phaser.Scene {
 
     addScore(pts) {
         this.score += pts;
-        this.scoreText.setText('СЧЕТ: ' + this.score);
+        this.scoreText.setText(T[getLang()].score + this.score);
         if (this.score > this.highScore) {
             this.highScore = this.score;
-            this.highScoreText.setText('РЕКОРД: ' + this.highScore);
+            this.highScoreText.setText(T[getLang()].highscore + this.highScore);
             localStorage.setItem('cosmic_highscore', this.highScore.toString());
         }
     }
@@ -672,10 +760,11 @@ class MainScene extends Phaser.Scene {
         const height = this.cameras.main.height;
         
         const overlay = this.add.rectangle(width/2, height/2, width, height, 0x000000, 0.8);
-        const goText = this.add.text(width/2, height/2 - 50, 'ИГРА ОКОНЧЕНА', { fontSize: '48px', fill: '#ff4444', fontStyle: 'bold' }).setOrigin(0.5);
-        const scoreText = this.add.text(width/2, height/2 + 20, `Счет: ${this.score}`, { fontSize: '32px', fill: '#fff' }).setOrigin(0.5);
+        const l = getLang();
+        const goText = this.add.text(width/2, height/2 - 50, T[l].game_over, { fontSize: '48px', fill: '#ff4444', fontStyle: 'bold' }).setOrigin(0.5);
+        const scoreText = this.add.text(width/2, height/2 + 20, T[l].score_go + this.score, { fontSize: '32px', fill: '#fff' }).setOrigin(0.5);
         
-        const restartBtn = this.add.text(width/2, height/2 + 100, 'ИГРАТЬ СНОВА', { 
+        const restartBtn = this.add.text(width/2, height/2 + 100, T[l].play_again, {
             fontSize: '36px', 
             fill: '#000', 
             backgroundColor: '#ffd700',
