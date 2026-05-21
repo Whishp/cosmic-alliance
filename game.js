@@ -346,6 +346,22 @@ class MainScene extends Phaser.Scene {
         this.currentProgressRatio = 0;
     }
 
+    init() {
+        this.score = 0;
+        this.displayScore = 0;
+        this.highScore = 0;
+        this.grid = [];
+        this.mergeCount = 0;
+        this.comboMultiplier = 1;
+        this.doublePointsActive = false;
+        this.doublePointsTurns = 0;
+        this.selectedCell = null;
+        this.isProcessing = false;
+        this.maxUnlockedTier = 3;
+        this.currentProgressRatio = 0;
+        this.particleEmitter = null;
+    }
+
     create() {
         this.input.mouse.disableContextMenu();
         
@@ -971,6 +987,32 @@ class MainScene extends Phaser.Scene {
                     this.endTurn();
                 });
             });
+        } else if (cell.tier === 0) {
+            // Move to empty cell
+            this.isProcessing = true;
+
+            this.deselect();
+
+            const targetX = this.gridOffsetX + col * this.cellSize;
+            const targetY = this.gridOffsetY + row * this.cellSize;
+
+            this.tweens.add({
+                targets: selCell.sprite,
+                x: targetX,
+                y: targetY,
+                duration: 200,
+                ease: 'Power2',
+                onComplete: () => {
+                    cell.tier = selCell.tier;
+                    cell.sprite = selCell.sprite;
+
+                    selCell.tier = 0;
+                    selCell.sprite = null;
+
+                    SoundManager.playClick();
+                    this.endTurn();
+                }
+            });
         } else if (cell.tier > 0) {
             // Change selection
             this.deselect();
@@ -1173,7 +1215,7 @@ class MainScene extends Phaser.Scene {
         }
 
         if (chainFound) {
-            this.comboMultiplier++;
+            this.comboMultiplier = Math.min(this.comboMultiplier + 1, 5);
             SoundManager.playCombo(this.comboMultiplier);
             this.time.delayedCall(200, () => {
                 this.doMerge(chainMergeArgs[0], chainMergeArgs[1], chainMergeArgs[2], chainMergeArgs[3], chainMergeArgs[4], () => {
