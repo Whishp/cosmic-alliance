@@ -24,30 +24,11 @@
         YaGames.init().then(sdk => { window.ysdk = sdk; });
     }
     </script>
+    <script src="phaser.min.js"></script>
 </head>
 <body>
     <div id="bg-layer"></div>
     <div id="game-container"></div>
-    <script>
-    // Load Phaser: fetch as text, then execute via (0,eval)() in global scope
-    // This avoids the UMD `this` binding problem (blob: URLs have opaque origin where this=undefined)
-    fetch('https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js')
-        .then(function(r) { return r.text(); })
-        .then(function(text) {
-            // (0,eval)() executes in global scope where this=window, setting window.Phaser correctly
-            (0, eval)(text);
-            if (typeof Phaser !== 'undefined') {
-                var gs = document.createElement('script');
-                gs.src = 'game.js';
-                document.body.appendChild(gs);
-            } else {
-                document.getElementById('game-container').innerHTML = '<p style="color:#fff;text-align:center;padding:2em">Ошибка загрузки Phaser. Обновите страницу.</p>';
-            }
-        })
-        .catch(function(e) {
-            console.error('Phaser load failed:', e);
-            document.getElementById('game-container').innerHTML = '<p style="color:#fff;text-align:center;padding:2em">Ошибка загрузки Phaser. Обновите страницу.</p>';
-        });
-    </script>
+    <script src="game.js"></script>
 </body>
 </html>
