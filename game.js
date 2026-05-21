@@ -421,7 +421,8 @@ class MainScene extends Phaser.Scene {
         this.fontSize = fontSize; // Store for later text creations
         this.cardY = cardY;
 
-        this.scoreText = this.add.text(20, cardY + 5, T[l].score + formatNumber(0), { fontFamily: FONT_FAMILY, fontSize: fontSize, fill: '#ffd700', shadow: { offsetX: 0, offsetY: 0, color: '#ffd700', blur: 10, fill: true } });
+        this.scoreText = this.add.text(20, cardY + 5, T[l].score + formatNumber(0), { fontFamily: FONT_FAMILY, fontSize: fontSize, fill: '#ffd700' });
+        this.setShadow(this.scoreText, '#ffd700', 10);
         
         // Progress Indicator UI
         this.maxUnlockedTier = 3; // Starts assuming they have tier 3 from spawn
@@ -432,9 +433,11 @@ class MainScene extends Phaser.Scene {
         // Try to load high score
         const savedScore = localStorage.getItem('cosmic_highscore');
         if (savedScore) this.highScore = parseInt(savedScore, 10);
-        this.highScoreText = this.add.text(width - 20, cardY + 5, T[l].highscore + formatNumber(this.highScore), { fontFamily: FONT_FAMILY, fontSize: fontSize, fill: '#aaa', shadow: { offsetX: 0, offsetY: 0, color: '#aaa', blur: 10, fill: true } }).setOrigin(1, 0);
+        this.highScoreText = this.add.text(width - 20, cardY + 5, T[l].highscore + formatNumber(this.highScore), { fontFamily: FONT_FAMILY, fontSize: fontSize, fill: '#aaa' }).setOrigin(1, 0);
+        this.setShadow(this.highScoreText, '#aaa', 10);
 
-        this.mergeCountText = this.add.text(width / 2, cardY + 20, T[l].merges + this.mergeCount, { fontFamily: FONT_FAMILY, fontSize: fontSize, fill: '#00e5ff', shadow: { offsetX: 0, offsetY: 0, color: '#00e5ff', blur: 10, fill: true } }).setOrigin(0.5);
+        this.mergeCountText = this.add.text(width / 2, cardY + 20, T[l].merges + this.mergeCount, { fontFamily: FONT_FAMILY, fontSize: fontSize, fill: '#00e5ff' }).setOrigin(0.5);
+        this.setShadow(this.mergeCountText, '#00e5ff', 10);
 
         // Try to load cloud save
         if (player) {
@@ -491,10 +494,18 @@ class MainScene extends Phaser.Scene {
         }
 
         // Mute button
-        const muteText = this.add.text(width - 50, 50, '🔊', { fontSize: '40px' }).setOrigin(0.5).setInteractive();
+        const savedMute = localStorage.getItem('cosmic_muted');
+        if (savedMute !== null) {
+            this.sound.mute = savedMute === '1';
+            isMuted = this.sound.mute;
+        }
+
+        const muteText = this.add.text(width - 50, 50, this.sound.mute ? '🔇' : '🔊', { fontSize: '40px' }).setOrigin(0.5).setInteractive();
         muteText.on('pointerdown', () => {
-            isMuted = !isMuted;
-            muteText.setText(isMuted ? '🔇' : '🔊');
+            this.sound.mute = !this.sound.mute;
+            isMuted = this.sound.mute; // Keep custom SoundManager in sync
+            localStorage.setItem('cosmic_muted', this.sound.mute ? '1' : '0');
+            muteText.setText(this.sound.mute ? '🔇' : '🔊');
         });
 
         // Rewarded Ad Button
@@ -503,9 +514,9 @@ class MainScene extends Phaser.Scene {
         const btnText = this.add.text(0, 0, T[getLang()].watch_ad, {
             fontFamily: FONT_FAMILY, fontSize: '16px',
             fill: '#fff',
-            fontStyle: 'bold',
-            shadow: { offsetX: 2, offsetY: 2, color: '#000', blur: 4, fill: true }
+            fontStyle: 'bold'
         }).setOrigin(0.5);
+        this.setShadow(btnText, '#000', 4);
         this.rewardedBtnContainer.add([btnBg, btnText]);
 
         btnBg.setInteractive({ useHandCursor: true });
@@ -609,7 +620,8 @@ class MainScene extends Phaser.Scene {
 
         const l = getLang();
         const titleText = this.add.text(0, -60, l === 'ru' ? 'ОФФЛАЙН ДОХОД' : 'OFFLINE INCOME', { fontFamily: FONT_FAMILY, fontSize: '24px', fill: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
-        const amountText = this.add.text(0, -10, '+' + formatNumber(amount), { fontFamily: FONT_FAMILY, fontSize: '36px', fill: '#ffd700', shadow: { offsetX: 1, offsetY: 1, color: '#000', blur: 2, fill: true } }).setOrigin(0.5);
+        const amountText = this.add.text(0, -10, '+' + formatNumber(amount), { fontFamily: FONT_FAMILY, fontSize: '36px', fill: '#ffd700' }).setOrigin(0.5);
+        this.setShadow(amountText, '#000', 2);
 
         const claimBtnBg = this.add.image(0, 50, 'button_bg').setOrigin(0.5).setScale(0.6, 0.5);
         const claimBtnText = this.add.text(0, 50, l === 'ru' ? 'ЗАБРАТЬ' : 'CLAIM', { fontFamily: FONT_FAMILY, fontSize: '20px', fill: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
@@ -664,6 +676,10 @@ class MainScene extends Phaser.Scene {
         }
     }
 
+    setShadow(textObj, color, blur) {
+        textObj.setShadow(0, 0, color, blur, true);
+    }
+
     createStyledButton(x, y, text, onClick) {
         const container = this.add.container(x, y);
         const paddingX = 20;
@@ -673,9 +689,9 @@ class MainScene extends Phaser.Scene {
             fontFamily: FONT_FAMILY,
             fontSize: '18px',
             fill: '#ffffff',
-            fontStyle: 'bold',
-            shadow: { offsetX: 0, offsetY: 0, color: '#ffffff', blur: 10, fill: true }
+            fontStyle: 'bold'
         }).setOrigin(0.5);
+        this.setShadow(btnText, '#ffffff', 10);
 
         const textWidth = btnText.width;
         const textHeight = btnText.height;
@@ -758,9 +774,9 @@ class MainScene extends Phaser.Scene {
             fontFamily: FONT_FAMILY,
             fontSize: '20px',
             fill: '#ffffff',
-            fontStyle: 'bold',
-            shadow: { offsetX: 0, offsetY: 0, color: '#ffffff', blur: 10, fill: true }
+            fontStyle: 'bold'
         }).setOrigin(0.5);
+        this.setShadow(text, '#ffffff', 10);
 
         bannerContainer.add([bg, text]);
 
@@ -1299,15 +1315,15 @@ class MainScene extends Phaser.Scene {
         const goText = this.add.text(width/2, height/2 - 100, T[l].game_over, {
             fontFamily: FONT_FAMILY, fontSize: '48px',
             fill: '#ff4444',
-            fontStyle: 'bold',
-            shadow: { offsetX: 2, offsetY: 2, color: '#000', blur: 5, fill: true }
+            fontStyle: 'bold'
         }).setOrigin(0.5);
+        this.setShadow(goText, '#000', 5);
         
         const scoreText = this.add.text(width/2, height/2 - 30, T[l].score_go + formatNumber(this.score), {
             fontFamily: FONT_FAMILY, fontSize: '36px',
-            fill: '#fff',
-            shadow: { offsetX: 2, offsetY: 2, color: '#000', blur: 3, fill: true }
+            fill: '#fff'
         }).setOrigin(0.5);
+        this.setShadow(scoreText, '#000', 3);
 
         // Game Over Animation
         goText.setScale(0);
@@ -1337,9 +1353,9 @@ class MainScene extends Phaser.Scene {
         const btnText = this.add.text(0, 0, T[l].play_again, {
             fontSize: '32px',
             fill: '#fff',
-            fontStyle: 'bold',
-            shadow: { offsetX: 2, offsetY: 2, color: '#000', blur: 4, fill: true }
+            fontStyle: 'bold'
         }).setOrigin(0.5);
+        this.setShadow(btnText, '#000', 4);
         restartBtnContainer.add([btnBg, btnText]);
         
         restartBtnContainer.setAlpha(0);
