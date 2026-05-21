@@ -672,13 +672,14 @@ class MainScene extends Phaser.Scene {
 
         this.initGrid();
         
-        this.particleEmitter = this.add.particles('particle').createEmitter({
-            active: false,
+        this.particleEmitter = this.add.particles('particle', {
+            x: 0, y: 0,
             speed: { min: 50, max: 150 },
             angle: { min: 0, max: 360 },
             scale: { start: 1, end: 0 },
             blendMode: 'ADD',
-            lifespan: 500
+            lifespan: 500,
+            emitting: false
         });
 
         if (ysdk && ysdk.features.GameplayAPI) {
