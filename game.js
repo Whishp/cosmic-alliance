@@ -23,7 +23,13 @@ const T = {
         watch_ad: 'Смотреть рекламу: 2x Очки на 1 ход!',
         game_over: 'ИГРА ОКОНЧЕНА',
         play_again: 'ИГРАТЬ СНОВА',
-        merges: 'СЛИЯНИЯ: '
+        merges: 'СЛИЯНИЯ: ',
+        tutorial_title: 'КАК ИГРАТЬ',
+        tutorial_step1: '1. Нажмите на фишку, чтобы выбрать',
+        tutorial_step2: '2. Нажмите на такую же фишку для слияния',
+        tutorial_step3: '3. Объединяйте для получения большего числа очков',
+        tutorial_step4: '4. Нажмите на пустую клетку для перемещения',
+        tutorial_ok: 'ПОНЯТНО'
     },
     en: {
         title: 'COSMIC ALLIANCE',
@@ -33,7 +39,13 @@ const T = {
         watch_ad: 'Watch Ad: 2x Points for 1 turn!',
         game_over: 'GAME OVER',
         play_again: 'PLAY AGAIN',
-        merges: 'MERGES: '
+        merges: 'MERGES: ',
+        tutorial_title: 'HOW TO PLAY',
+        tutorial_step1: '1. Tap a piece to select',
+        tutorial_step2: '2. Tap matching piece to merge',
+        tutorial_step3: '3. Merge higher tiers for more points',
+        tutorial_step4: '4. Tap empty cell to move selected piece',
+        tutorial_ok: 'OK'
     }
 };
 
@@ -360,6 +372,8 @@ class MainScene extends Phaser.Scene {
         this.maxUnlockedTier = 3;
         this.currentProgressRatio = 0;
         this.particleEmitter = null;
+        this.hintTimer = null;
+        this.hintTweens = [];
     }
 
     create() {
@@ -592,7 +606,60 @@ class MainScene extends Phaser.Scene {
             ysdk.features.GameplayAPI.start();
         }
 
-        this.checkOfflineIncome();
+        if (!localStorage.getItem('alliance_tutorial_done')) {
+            this.showTutorialOverlay();
+        } else {
+            this.checkOfflineIncome();
+        }
+    }
+
+    showTutorialOverlay() {
+        this.isProcessing = true;
+        const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
+        const l = getLang();
+
+        const overlay = this.add.rectangle(width/2, height/2, width, height, 0x000000, 0.85);
+        overlay.setInteractive(); // block background clicks
+
+        const popup = this.add.container(width/2, height/2);
+
+        const cardBg = this.add.graphics();
+        cardBg.fillStyle(0x1a1a3a, 1);
+        cardBg.fillRoundedRect(-200, -180, 400, 360, 20);
+        cardBg.lineStyle(3, 0x00e5ff, 1);
+        cardBg.strokeRoundedRect(-200, -180, 400, 360, 20);
+
+        const titleText = this.add.text(0, -140, T[l].tutorial_title, { fontFamily: FONT_FAMILY, fontSize: '28px', fill: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        this.setShadow(titleText, '#00e5ff', 5);
+
+        const stepStyle = { fontFamily: FONT_FAMILY, fontSize: '18px', fill: '#ddd', wordWrap: { width: 360, useAdvancedWrap: true } };
+
+        const s1 = this.add.text(-180, -90, T[l].tutorial_step1, stepStyle).setOrigin(0, 0.5);
+        const s2 = this.add.text(-180, -40, T[l].tutorial_step2, stepStyle).setOrigin(0, 0.5);
+        const s3 = this.add.text(-180, 10, T[l].tutorial_step3, stepStyle).setOrigin(0, 0.5);
+        const s4 = this.add.text(-180, 60, T[l].tutorial_step4, stepStyle).setOrigin(0, 0.5);
+
+        const okBtn = this.createStyledButton(0, 130, T[l].tutorial_ok, () => {
+            localStorage.setItem('alliance_tutorial_done', 'true');
+            overlay.destroy();
+            popup.destroy();
+            this.isProcessing = false;
+            this.checkOfflineIncome();
+        });
+
+        popup.add([cardBg, titleText, s1, s2, s3, s4, okBtn]);
+        popup.setDepth(100);
+        overlay.setDepth(99);
+
+        popup.setScale(0);
+        this.tweens.add({
+            targets: popup,
+            scaleX: 1,
+            scaleY: 1,
+            duration: 400,
+            ease: 'Back.easeOut'
+        });
     }
 
     checkOfflineIncome() {
@@ -948,11 +1015,72 @@ class MainScene extends Phaser.Scene {
         for (let i = 0; i < 5; i++) {
             this.spawnRandom();
         }
+
+        this.resetHintTimer();
+    }
+
+    resetHintTimer() {
+        if (this.hintTimer) {
+            this.hintTimer.destroy();
+        }
+        this.clearHints();
+        this.hintTimer = this.time.delayedCall(10000, () => this.showHint());
+    }
+
+    clearHints() {
+        for (const tween of this.hintTweens) {
+            if (tween.targets && tween.targets[0]) {
+                tween.targets[0].alpha = 1;
+            }
+            tween.stop();
+        }
+        this.hintTweens = [];
+    }
+
+    showHint() {
+        if (this.isProcessing || this.selectedCell) return;
+
+        let hintFound = false;
+        for (let r = 0; r < this.gridSize; r++) {
+            for (let c = 0; c < this.gridSize; c++) {
+                const cell = this.grid[r][c];
+                if (cell.tier > 0 && cell.tier < 7) {
+                    if (c < this.gridSize - 1 && this.grid[r][c+1].tier === cell.tier) {
+                        this.addHintTween(cell.sprite);
+                        this.addHintTween(this.grid[r][c+1].sprite);
+                        hintFound = true;
+                        break;
+                    }
+                    if (r < this.gridSize - 1 && this.grid[r+1][c].tier === cell.tier) {
+                        this.addHintTween(cell.sprite);
+                        this.addHintTween(this.grid[r+1][c].sprite);
+                        hintFound = true;
+                        break;
+                    }
+                }
+            }
+            if (hintFound) break;
+        }
+    }
+
+    addHintTween(sprite) {
+        if (!sprite) return;
+        const tween = this.tweens.add({
+            targets: sprite,
+            alpha: 0.5,
+            duration: 800,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
+        this.hintTweens.push(tween);
     }
 
     handleCellClick(row, col) {
         if (this.isProcessing) return;
         
+        this.resetHintTimer();
+
         const cell = this.grid[row][col];
         
         // Deselect logic
@@ -1252,6 +1380,7 @@ class MainScene extends Phaser.Scene {
         }
         
         this.isProcessing = false;
+        this.resetHintTimer();
         localStorage.setItem('cosmic_last_active', Date.now().toString());
     }
 
