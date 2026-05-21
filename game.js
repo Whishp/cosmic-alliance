@@ -29,7 +29,12 @@ const T = {
         tutorial_step2: '2. Нажмите на такую же фишку для слияния',
         tutorial_step3: '3. Объединяйте для получения большего числа очков',
         tutorial_step4: '4. Нажмите на пустую клетку для перемещения',
-        tutorial_ok: 'ПОНЯТНО'
+        tutorial_ok: 'ПОНЯТНО',
+        prestige: 'Престиж',
+        prestigeMultiplier: 'Множитель',
+        prestigeConfirm: 'Сбросить прогресс ради множителя очков?',
+        dailyChallenge: 'Ежедневный вызов',
+        dailyReward: 'Награда'
     },
     en: {
         title: 'COSMIC ALLIANCE',
@@ -45,7 +50,12 @@ const T = {
         tutorial_step2: '2. Tap matching piece to merge',
         tutorial_step3: '3. Merge higher tiers for more points',
         tutorial_step4: '4. Tap empty cell to move selected piece',
-        tutorial_ok: 'OK'
+        tutorial_ok: 'OK',
+        prestige: 'Prestige',
+        prestigeMultiplier: 'Multiplier',
+        prestigeConfirm: 'Reset progress for a score multiplier?',
+        dailyChallenge: 'Daily Challenge',
+        dailyReward: 'Reward'
     }
 };
 
@@ -142,24 +152,24 @@ class BootScene extends Phaser.Scene {
                 promises.push(ysdk.getPlayer().then(_player => {
                     player = _player;
                 }).catch(err => {
-                    console.warn("Player init failed:", err);
+                    // silent fallback
                 }));
                 
                 promises.push(ysdk.getLeaderboards().then(_lb => {
                     leaderboard = _lb;
                 }).catch(err => {
-                    console.warn("Leaderboard init failed:", err);
+                    // silent fallback
                 }));
                 
                 Promise.all(promises).then(() => {
                     this.scene.start('Main');
                 });
             }).catch(err => {
-                console.warn("YaGames init failed:", err);
+                // silent fallback
                 this.scene.start('Main');
             });
         } else {
-            console.warn("YaGames SDK not found, starting game anyway");
+            // silent fallback
             this.scene.start('Main');
         }
     }
@@ -356,9 +366,13 @@ class MainScene extends Phaser.Scene {
         this.rewardedBtn = null;
         this.doublePointsTurns = 0;
         this.currentProgressRatio = 0;
+        this.prestigeMultiplier = 1.0;
+        this.prestigeCount = 0;
+        this.isDailyChallenge = false;
+        this.rng = new Phaser.Math.RandomDataGenerator();
     }
 
-    init() {
+    init(data) {
         this.score = 0;
         this.displayScore = 0;
         this.highScore = 0;
@@ -374,6 +388,17 @@ class MainScene extends Phaser.Scene {
         this.particleEmitter = null;
         this.hintTimer = null;
         this.hintTweens = [];
+        this.prestigeMultiplier = 1.0;
+        this.prestigeCount = 0;
+        this.isDailyChallenge = data && data.isDailyChallenge ? true : false;
+        this.dailyChallengeCompleted = false;
+
+        if (this.isDailyChallenge) {
+            const dateStr = new Date().toISOString().split('T')[0];
+            this.rng.init([dateStr]);
+        } else {
+            this.rng.init([(Math.random() * 1000000).toString()]);
+        }
     }
 
     create() {
@@ -463,26 +488,54 @@ class MainScene extends Phaser.Scene {
         // Try to load high score
         const savedScore = localStorage.getItem('cosmic_highscore');
         if (savedScore) this.highScore = parseInt(savedScore, 10);
+
+        const savedPrestigeMult = localStorage.getItem('prestigeMultiplier');
+        if (savedPrestigeMult) this.prestigeMultiplier = parseFloat(savedPrestigeMult);
+
+        const savedPrestigeCount = localStorage.getItem('prestigeCount');
+        if (savedPrestigeCount) this.prestigeCount = parseInt(savedPrestigeCount, 10);
+
         this.highScoreText = this.add.text(width - 20, cardY + 5, T[l].highscore + formatNumber(this.highScore), { fontFamily: FONT_FAMILY, fontSize: fontSize, fill: '#aaa' }).setOrigin(1, 0);
         this.setShadow(this.highScoreText, '#aaa', 10);
 
         this.mergeCountText = this.add.text(width / 2, cardY + 20, T[l].merges + this.mergeCount, { fontFamily: FONT_FAMILY, fontSize: fontSize, fill: '#00e5ff' }).setOrigin(0.5);
         this.setShadow(this.mergeCountText, '#00e5ff', 10);
 
+        if (this.prestigeMultiplier > 1.0) {
+            this.prestigeText = this.add.text(20, cardY + 45, T[l].prestigeMultiplier + ': ' + this.prestigeMultiplier + 'x', { fontFamily: FONT_FAMILY, fontSize: fontSize, fill: '#ff8800' });
+            this.setShadow(this.prestigeText, '#ff8800', 10);
+        }
+
         // Try to load cloud save
         if (player) {
-            player.getData(['score', 'highScore', 'grid']).then(data => {
+            player.getData(['score', 'highScore', 'grid', 'prestigeMultiplier', 'prestigeCount']).then(data => {
                 if (data.highScore) {
                     this.highScore = data.highScore;
                     this.highScoreText.setText(T[getLang()].highscore + formatNumber(this.highScore));
                     localStorage.setItem('cosmic_highscore', this.highScore.toString());
                 }
-                if (data.score) {
+                if (data.prestigeMultiplier) {
+                    this.prestigeMultiplier = data.prestigeMultiplier;
+                    localStorage.setItem('prestigeMultiplier', this.prestigeMultiplier.toString());
+                }
+                if (data.prestigeCount) {
+                    this.prestigeCount = data.prestigeCount;
+                    localStorage.setItem('prestigeCount', this.prestigeCount.toString());
+                }
+                if (this.prestigeMultiplier > 1.0) {
+                    if (this.prestigeText) {
+                        this.prestigeText.setText(T[getLang()].prestigeMultiplier + ': ' + this.prestigeMultiplier + 'x');
+                    } else {
+                        this.prestigeText = this.add.text(20, cardY + 45, T[getLang()].prestigeMultiplier + ': ' + this.prestigeMultiplier + 'x', { fontFamily: FONT_FAMILY, fontSize: fontSize, fill: '#ff8800' });
+                        this.setShadow(this.prestigeText, '#ff8800', 10);
+                    }
+                }
+                if (data.score && !this.isDailyChallenge) {
                     this.score = data.score;
                     this.displayScore = data.score;
                     this.scoreText.setText(T[getLang()].score + formatNumber(this.score));
                 }
-                if (data.grid && Array.isArray(data.grid) && data.grid.length === this.gridSize) {
+                if (data.grid && Array.isArray(data.grid) && data.grid.length === this.gridSize && !this.isDailyChallenge) {
                     let valid = true;
                     for (let r = 0; r < this.gridSize; r++) {
                         if (!Array.isArray(data.grid[r]) || data.grid[r].length !== this.gridSize) {
@@ -517,6 +570,9 @@ class MainScene extends Phaser.Scene {
                             }
                         }
                     }
+                }
+                if (!this.isDailyChallenge && this.score >= 5000 && !this.prestigeBtnObj) {
+                    this.showPrestigeButton();
                 }
             }).catch(() => {
                 // Ignore error, fallback to localStorage
@@ -589,6 +645,20 @@ class MainScene extends Phaser.Scene {
         if (!ysdk || !ysdk.adv || !ysdk.adv.showRewardedVideo) {
             this.rewardedBtn.setVisible(false);
             this.rewardedBtn.setAlpha(0);
+        }
+
+        if (this.isDailyChallenge) {
+            this.rewardedBtn.setVisible(false);
+            const targetText = this.add.text(width / 2, 215, T[getLang()].dailyChallenge + " - Target: 2000", { fontFamily: FONT_FAMILY, fontSize: '20px', fill: '#00ff00', fontStyle: 'bold' }).setOrigin(0.5);
+            this.setShadow(targetText, '#00ff00', 10);
+        } else {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const lastDaily = localStorage.getItem('lastDailyChallenge');
+            if (lastDaily !== todayStr) {
+                this.dailyChallengeBtn = this.createStyledButton(width / 2, 270, T[getLang()].dailyChallenge, () => {
+                    this.scene.restart({ isDailyChallenge: true });
+                });
+            }
         }
 
         this.initGrid();
@@ -956,7 +1026,7 @@ class MainScene extends Phaser.Scene {
                     isMuted = false;
                 }, 
                 onError: (e) => {
-                    console.warn('Video ad error', e);
+                    // silent fallback
                     isMuted = false;
                 }
             }
@@ -975,13 +1045,15 @@ class MainScene extends Phaser.Scene {
     }
 
     saveCloudData() {
-        if (player) {
+        if (player && !this.isDailyChallenge) {
             let gridData = this.grid.map(row => row.map(c => c.tier));
             player.setData({
                 score: this.score,
                 highScore: this.highScore,
-                grid: gridData
-            }).catch(e => console.warn(e));
+                grid: gridData,
+                prestigeMultiplier: this.prestigeMultiplier,
+                prestigeCount: this.prestigeCount
+            }).catch(e => { /* silent fallback */ });
         }
     }
 
@@ -1219,7 +1291,10 @@ class MainScene extends Phaser.Scene {
                 if (this.doublePointsActive) {
                     multiplier *= 2;
                 }
-                const pts = this.tierPoints[nextTier] * multiplier;
+                if (this.prestigeMultiplier > 1.0) {
+                    multiplier *= this.prestigeMultiplier;
+                }
+                const pts = Math.floor(this.tierPoints[nextTier] * multiplier);
                 this.addScore(pts);
                 this.showFloatingText(targetX, targetY - 20, `+${pts}`, this.tierColors[nextTier]);
                 
@@ -1366,7 +1441,7 @@ class MainScene extends Phaser.Scene {
         }
 
         // Spawn new items
-        const numToSpawn = Phaser.Math.Between(1, 2);
+        const numToSpawn = this.rng.integerInRange(1, 2);
         let spawned = 0;
         for (let i = 0; i < numToSpawn; i++) {
             if (this.spawnRandom()) spawned++;
@@ -1413,10 +1488,10 @@ class MainScene extends Phaser.Scene {
         const empty = this.getEmptyCells();
         if (empty.length === 0) return false;
         
-        const target = Phaser.Utils.Array.GetRandom(empty);
+        const target = this.rng.pick(empty);
         
         // Weighted random tier (mostly 1 and 2)
-        const rand = Math.random();
+        const rand = this.rng.frac();
         let tier = 1;
         if (rand > 0.8) tier = 2;
         if (rand > 0.95) tier = 3;
@@ -1428,13 +1503,160 @@ class MainScene extends Phaser.Scene {
     addScore(pts) {
         this.score += pts;
 
-        if (this.score > this.highScore) {
+        if (!this.isDailyChallenge && this.score > this.highScore) {
             this.highScore = this.score;
             this.highScoreText.setText(T[getLang()].highscore + formatNumber(this.highScore));
             localStorage.setItem('cosmic_highscore', this.highScore.toString());
         }
+
+        if (this.isDailyChallenge && this.score >= 2000 && !this.dailyChallengeCompleted) {
+            this.dailyChallengeCompleted = true;
+            this.showDailyChallengeComplete();
+        }
+
+        if (!this.isDailyChallenge && this.score >= 5000 && !this.prestigeBtnObj) {
+            this.showPrestigeButton();
+        }
+
         this.updateBackgroundGradient();
         this.updateProgressIndicator();
+    }
+
+    showPrestigeButton() {
+        const width = this.cameras.main.width;
+        this.prestigeBtnObj = this.createStyledButton(width / 2, 330, T[getLang()].prestige, () => {
+            this.showPrestigeConfirm();
+        });
+    }
+
+    showPrestigeConfirm() {
+        this.isProcessing = true;
+        const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
+        const l = getLang();
+
+        const overlay = this.add.rectangle(width/2, height/2, width, height, 0x000000, 0.85);
+        overlay.setInteractive();
+
+        const popup = this.add.container(width/2, height/2);
+
+        const cardBg = this.add.graphics();
+        cardBg.fillStyle(0x1a1a3a, 1);
+        cardBg.fillRoundedRect(-200, -120, 400, 240, 20);
+        cardBg.lineStyle(3, 0xff8800, 1);
+        cardBg.strokeRoundedRect(-200, -120, 400, 240, 20);
+
+        const titleText = this.add.text(0, -70, T[l].prestige, { fontFamily: FONT_FAMILY, fontSize: '28px', fill: '#ff8800', fontStyle: 'bold' }).setOrigin(0.5);
+        this.setShadow(titleText, '#ff8800', 5);
+
+        const confirmStyle = { fontFamily: FONT_FAMILY, fontSize: '20px', fill: '#ddd', wordWrap: { width: 360, useAdvancedWrap: true }, align: 'center' };
+        const confirmText = this.add.text(0, -10, T[l].prestigeConfirm, confirmStyle).setOrigin(0.5);
+
+        const nextMult = this.prestigeMultiplier + 0.5;
+        const rewardText = this.add.text(0, 30, T[l].prestigeMultiplier + ": " + nextMult + "x", { fontFamily: FONT_FAMILY, fontSize: '22px', fill: '#ffd700' }).setOrigin(0.5);
+
+        const okBtn = this.createStyledButton(-80, 80, T[l].tutorial_ok, () => {
+            this.prestigeMultiplier += 0.5;
+            this.prestigeCount++;
+            this.score = 0;
+            // Highscore is preserved, but we reset grid
+            localStorage.setItem('prestigeMultiplier', this.prestigeMultiplier.toString());
+            localStorage.setItem('prestigeCount', this.prestigeCount.toString());
+
+            // clear grid from save
+            let emptyGrid = Array(this.gridSize).fill().map(() => Array(this.gridSize).fill(0));
+            if (player) {
+                player.setData({
+                    prestigeMultiplier: this.prestigeMultiplier,
+                    prestigeCount: this.prestigeCount,
+                    score: this.score,
+                    grid: emptyGrid
+                }).catch(() => {});
+            }
+
+            this.scene.restart();
+        });
+
+        // Cancel button
+        const cancelBtnContainer = this.add.container(80, 80);
+        const btnText = this.add.text(0, 0, "X", { fontFamily: FONT_FAMILY, fontSize: '20px', fill: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        const btnHit = this.add.zone(0, 0, 100, 50).setInteractive({ useHandCursor: true });
+        cancelBtnContainer.add([btnText, btnHit]);
+
+        btnHit.on('pointerdown', () => {
+            overlay.destroy();
+            popup.destroy();
+            this.isProcessing = false;
+        });
+
+        popup.add([cardBg, titleText, confirmText, rewardText, okBtn, cancelBtnContainer]);
+        popup.setDepth(100);
+        overlay.setDepth(99);
+
+        popup.setScale(0);
+        this.tweens.add({
+            targets: popup,
+            scaleX: 1,
+            scaleY: 1,
+            duration: 400,
+            ease: 'Back.easeOut'
+        });
+    }
+
+    showDailyChallengeComplete() {
+        this.isProcessing = true;
+        const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
+        const l = getLang();
+
+        const todayStr = new Date().toISOString().split('T')[0];
+        localStorage.setItem('lastDailyChallenge', todayStr);
+
+        // Bonus points added to normal high score logic
+        const bonusPts = 5000;
+
+        let savedScore = localStorage.getItem('cosmic_highscore');
+        let newHighScore = savedScore ? parseInt(savedScore, 10) : 0;
+        newHighScore += bonusPts;
+        localStorage.setItem('cosmic_highscore', newHighScore.toString());
+        if (player) {
+            player.setData({ highScore: newHighScore }).catch(() => {});
+        }
+
+        const overlay = this.add.rectangle(width/2, height/2, width, height, 0x000000, 0.85);
+        overlay.setInteractive();
+
+        const popup = this.add.container(width/2, height/2);
+
+        const cardBg = this.add.graphics();
+        cardBg.fillStyle(0x1a1a3a, 1);
+        cardBg.fillRoundedRect(-180, -120, 360, 240, 20);
+        cardBg.lineStyle(3, 0x00ff00, 1);
+        cardBg.strokeRoundedRect(-180, -120, 360, 240, 20);
+
+        const titleText = this.add.text(0, -70, T[l].dailyChallenge, { fontFamily: FONT_FAMILY, fontSize: '28px', fill: '#00ff00', fontStyle: 'bold' }).setOrigin(0.5);
+        this.setShadow(titleText, '#00ff00', 5);
+
+        const rewardText = this.add.text(0, -10, T[l].dailyReward + ": +" + bonusPts, { fontFamily: FONT_FAMILY, fontSize: '22px', fill: '#ffd700' }).setOrigin(0.5);
+
+        const okBtn = this.createStyledButton(0, 60, T[l].tutorial_ok, () => {
+            this.scene.restart(); // Back to normal mode
+        });
+
+        popup.add([cardBg, titleText, rewardText, okBtn]);
+        popup.setDepth(100);
+        overlay.setDepth(99);
+
+        popup.setScale(0);
+        this.tweens.add({
+            targets: popup,
+            scaleX: 1,
+            scaleY: 1,
+            duration: 400,
+            ease: 'Back.easeOut'
+        });
+
+        this.spawnParticles(width/2, height/2, 0x00ff00, 50);
     }
 
     updateProgressIndicator() {
@@ -1470,7 +1692,7 @@ class MainScene extends Phaser.Scene {
             ysdk.features.GameplayAPI.stop();
         }
 
-        if (leaderboard) {
+        if (leaderboard && !this.isDailyChallenge) {
             ysdk.isAvailableMethod('leaderboards.setLeaderboardScore').then(available => {
                 if (available) {
                     leaderboard.setLeaderboardScore('MainBoard', this.score);
