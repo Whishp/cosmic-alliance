@@ -366,6 +366,7 @@ class MainScene extends Phaser.Scene {
         this.gridOffsetX = (width - (this.gridSize * this.cellSize)) / 2 + (this.cellSize / 2);
 
         this.bgRect = this.add.graphics();
+        this.drawBackground();
 
         // Background starfield (parallax layers)
         this.starLayers = [];
@@ -661,6 +662,135 @@ class MainScene extends Phaser.Scene {
                 this.scoreText.setText(T[getLang()].score + formatNumber(Math.floor(this.displayScore)));
             }
         }
+    }
+
+    createStyledButton(x, y, text, onClick) {
+        const container = this.add.container(x, y);
+        const paddingX = 20;
+        const paddingY = 15;
+
+        const btnText = this.add.text(0, 0, text, {
+            fontFamily: FONT_FAMILY,
+            fontSize: '18px',
+            fill: '#ffffff',
+            fontStyle: 'bold',
+            shadow: { offsetX: 0, offsetY: 0, color: '#ffffff', blur: 10, fill: true }
+        }).setOrigin(0.5);
+
+        const textWidth = btnText.width;
+        const textHeight = btnText.height;
+        const bgWidth = textWidth + paddingX * 2;
+        const bgHeight = textHeight + paddingY * 2;
+
+        const bg = this.add.graphics();
+        bg.fillGradientStyle(0x1a1a3a, 0x1a1a3a, 0x0a0a2a, 0x0a0a2a, 1);
+        bg.fillRoundedRect(-bgWidth/2, -bgHeight/2, bgWidth, bgHeight, 10);
+        bg.lineStyle(2, 0x00e5ff, 0.8);
+        bg.strokeRoundedRect(-bgWidth/2, -bgHeight/2, bgWidth, bgHeight, 10);
+
+        // Interactive hit area
+        const hitArea = this.add.zone(0, 0, bgWidth, bgHeight).setInteractive({ useHandCursor: true });
+
+        container.add([bg, btnText, hitArea]);
+
+        hitArea.on('pointerdown', () => {
+            this.tweens.killTweensOf(container);
+            this.tweens.add({
+                targets: container,
+                scaleX: 0.85,
+                scaleY: 0.85,
+                duration: 100,
+                ease: 'Back.easeIn',
+                yoyo: true,
+                onComplete: onClick
+            });
+        });
+
+        hitArea.on('pointerover', () => {
+            this.tweens.add({
+                targets: container,
+                scaleX: 1.05,
+                scaleY: 1.05,
+                duration: 200,
+                ease: 'Sine.easeOut'
+            });
+            bg.clear();
+            bg.fillGradientStyle(0x2a2a5a, 0x2a2a5a, 0x1a1a3a, 0x1a1a3a, 1);
+            bg.fillRoundedRect(-bgWidth/2, -bgHeight/2, bgWidth, bgHeight, 10);
+            bg.lineStyle(2, 0xff00ff, 1);
+            bg.strokeRoundedRect(-bgWidth/2, -bgHeight/2, bgWidth, bgHeight, 10);
+        });
+
+        hitArea.on('pointerout', () => {
+            this.tweens.add({
+                targets: container,
+                scaleX: 1,
+                scaleY: 1,
+                duration: 200,
+                ease: 'Sine.easeOut'
+            });
+            bg.clear();
+            bg.fillGradientStyle(0x1a1a3a, 0x1a1a3a, 0x0a0a2a, 0x0a0a2a, 1);
+            bg.fillRoundedRect(-bgWidth/2, -bgHeight/2, bgWidth, bgHeight, 10);
+            bg.lineStyle(2, 0x00e5ff, 0.8);
+            bg.strokeRoundedRect(-bgWidth/2, -bgHeight/2, bgWidth, bgHeight, 10);
+        });
+
+        return container;
+    }
+
+    showBanner(message) {
+        const width = this.cameras.main.width;
+
+        const bannerContainer = this.add.container(width/2, -100);
+        bannerContainer.setDepth(100); // Ensure it's on top
+
+        const bgWidth = Math.min(width - 40, 400);
+        const bgHeight = 60;
+
+        const bg = this.add.graphics();
+        bg.fillGradientStyle(0x3a1a5a, 0x3a1a5a, 0x1a0a2a, 0x1a0a2a, 1);
+        bg.fillRoundedRect(-bgWidth/2, -bgHeight/2, bgWidth, bgHeight, 15);
+        bg.lineStyle(2, 0xff00ff, 1);
+        bg.strokeRoundedRect(-bgWidth/2, -bgHeight/2, bgWidth, bgHeight, 15);
+
+        const text = this.add.text(0, 0, message, {
+            fontFamily: FONT_FAMILY,
+            fontSize: '20px',
+            fill: '#ffffff',
+            fontStyle: 'bold',
+            shadow: { offsetX: 0, offsetY: 0, color: '#ffffff', blur: 10, fill: true }
+        }).setOrigin(0.5);
+
+        bannerContainer.add([bg, text]);
+
+        // Slide down
+        this.tweens.add({
+            targets: bannerContainer,
+            y: 80,
+            duration: 500,
+            ease: 'Back.easeOut',
+            onComplete: () => {
+                // Wait 3 seconds, then slide back up
+                this.time.delayedCall(3000, () => {
+                    this.tweens.add({
+                        targets: bannerContainer,
+                        y: -100,
+                        duration: 500,
+                        ease: 'Back.easeIn',
+                        onComplete: () => bannerContainer.destroy()
+                    });
+                });
+            }
+        });
+    }
+
+    drawBackground() {
+        if (!this.bgRect) return;
+        this.bgRect.clear();
+        // vertical gradient dark space to lighter bottom
+        this.bgRect.fillGradientStyle(0x0a0a1a, 0x0a0a1a, 0x1a0a2a, 0x1a0a2a, 1);
+        this.bgRect.fillRect(0, 0, this.cameras.main.width, this.cameras.main.height);
     }
 
     drawProgressBar(width, progressRatio) {
