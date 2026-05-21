@@ -392,6 +392,12 @@ class MainScene extends Phaser.Scene {
         this.prestigeCount = 0;
         this.isDailyChallenge = data && data.isDailyChallenge ? true : false;
         this.dailyChallengeCompleted = false;
+        this.scoreText = null;
+        this.highScoreText = null;
+        this.mergeCountText = null;
+        this.prestigeText = null;
+        this.prestigeBtnObj = null;
+        this.rewardedBtn = null;
 
         if (this.isDailyChallenge) {
             const dateStr = new Date().toISOString().split('T')[0];
@@ -1322,6 +1328,7 @@ class MainScene extends Phaser.Scene {
         cell.tier = tier;
         if (tier > this.maxUnlockedTier) {
             this.maxUnlockedTier = tier;
+            this.showConfetti();
         }
 
         const x = this.gridOffsetX + c * this.cellSize;
@@ -1574,7 +1581,12 @@ class MainScene extends Phaser.Scene {
                 }).catch(() => {});
             }
 
-            this.scene.restart();
+            this.showConfetti();
+            popup.destroy();
+            overlay.destroy();
+            this.time.delayedCall(2000, () => {
+                this.scene.restart();
+            });
         });
 
         // Cancel button
@@ -1601,6 +1613,38 @@ class MainScene extends Phaser.Scene {
             duration: 400,
             ease: 'Back.easeOut'
         });
+    }
+
+    showConfetti() {
+        const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
+        const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff, 0x00ffff, 0xff8800];
+
+        for (let i = 0; i < 100; i++) {
+            const color = Phaser.Utils.Array.GetRandom(colors);
+            const x = Phaser.Math.Between(0, width);
+            const y = Phaser.Math.Between(-100, -10);
+
+            const rect = this.add.graphics();
+            rect.fillStyle(color, 1);
+            rect.fillRect(-5, -10, 10, 20);
+            rect.setPosition(x, y);
+            rect.setDepth(150);
+
+            const duration = Phaser.Math.Between(2000, 4000);
+
+            this.tweens.add({
+                targets: rect,
+                y: height + 50,
+                x: x + Phaser.Math.Between(-100, 100),
+                rotation: Phaser.Math.FloatBetween(0, Math.PI * 4),
+                duration: duration,
+                ease: 'Sine.easeInOut',
+                onComplete: () => {
+                    rect.destroy();
+                }
+            });
+        }
     }
 
     showDailyChallengeComplete() {
