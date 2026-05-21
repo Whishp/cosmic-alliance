@@ -6,6 +6,36 @@
     <title>Космический Альянс</title>
     <link rel="stylesheet" href="style.css">
     
+    <script>
+// Fallback: if Yandex SDK not available (local/GitHub Pages), mock it
+if (typeof YaGames === 'undefined') {
+    console.log('Yandex SDK not available \u2014 using mock');
+    window.YaGames = {
+        init: () => Promise.resolve({
+            environment: { i18n: { lang: 'ru' } },
+            features: { 
+                LoadingAPI: { ready: () => {} },
+                GameplayAPI: { start: () => {}, stop: () => {} }
+            },
+            getPlayer: () => Promise.resolve({ 
+                getName: () => 'Player',
+                getPhoto: () => '',
+                isAuthorized: () => false
+            }),
+            getLeaderboards: () => Promise.resolve({
+                setLeaderboardScore: () => Promise.resolve(),
+                getLeaderboardDescription: () => Promise.resolve({ leaderboard: { name: 'main' } })
+            }),
+            adv: {
+                showRewardedVideo: (cb) => { if(cb && cb.callbacks) cb.callbacks.onClose?.(); },
+                showFullscreenAdv: (cb) => { if(cb && cb.callbacks) cb.callbacks.onClose?.(true); }
+            },
+            isAvailableMethod: () => Promise.resolve(false)
+        })
+    };
+    YaGames.init().then(sdk => { window.ysdk = sdk; });
+}
+</script>
     <!-- Yandex Games SDK -->
     <script src="https://yandex.ru/games/sdk/v2/sdk.js"></script>
     
