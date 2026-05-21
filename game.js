@@ -3,6 +3,17 @@ let ysdk = null;
 let player = null;
 let leaderboard = null;
 
+const FONT_FAMILY = '"Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif';
+
+function formatNumber(num) {
+    if (num < 1000) return num.toString();
+    const suffixes = ["", "K", "M", "B", "T"];
+    const suffixNum = Math.floor(("" + num).length / 3);
+    let shortValue = parseFloat((suffixNum != 0 ? (num / Math.pow(1000, suffixNum)) : num).toPrecision(2));
+    if (shortValue % 1 != 0) shortValue = shortValue.toFixed(1);
+    return shortValue + suffixes[suffixNum];
+}
+
 const T = {
     ru: {
         title: 'КОСМИЧЕСКИЙ АЛЬЯНС',
@@ -260,24 +271,48 @@ class BootScene extends Phaser.Scene {
 
         // Button Texture (Rounded gradient background)
         const canvas = document.createElement('canvas');
-        canvas.width = 400; // Wider to accommodate RU text
-        canvas.height = 80;
+        canvas.width = 420; // Wider to accommodate glow and RU text
+        canvas.height = 100;
         const ctx = canvas.getContext('2d');
-        const gradient = ctx.createLinearGradient(0, 0, 400, 0);
+
+        // Outer glow
+        ctx.shadowColor = '#00e5ff';
+        ctx.shadowBlur = 15;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+
+        const gradient = ctx.createLinearGradient(10, 10, 410, 10);
         gradient.addColorStop(0, '#1a0a2a');
-        gradient.addColorStop(1, '#2a0a4a');
+        gradient.addColorStop(0.5, '#2a1a5a');
+        gradient.addColorStop(1, '#1a0a2a');
+
         ctx.fillStyle = gradient;
         ctx.beginPath();
-        // Fallback for ctx.roundRect which might not be universally supported
+
+        // Render rect with padding for shadow
         if (ctx.roundRect) {
-            ctx.roundRect(0, 0, 400, 80, 40);
+            ctx.roundRect(10, 10, 400, 80, 40);
         } else {
-            ctx.rect(0, 0, 400, 80);
+            ctx.rect(10, 10, 400, 80);
         }
         ctx.fill();
-        ctx.lineWidth = 4;
+
+        ctx.shadowBlur = 0; // Remove shadow for stroke
+        ctx.lineWidth = 3;
         ctx.strokeStyle = '#00e5ff';
         ctx.stroke();
+
+        // Inner highlight (subtle)
+        ctx.beginPath();
+        if (ctx.roundRect) {
+            ctx.roundRect(12, 12, 396, 76, 38);
+        } else {
+            ctx.rect(12, 12, 396, 76);
+        }
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.stroke();
+
         this.textures.addCanvas('button_bg', canvas);
 
         graphics.destroy();
@@ -306,6 +341,7 @@ class MainScene extends Phaser.Scene {
         this.doublePointsActive = false;
         this.rewardedBtn = null;
         this.doublePointsTurns = 0;
+        this.currentProgressRatio = 0;
     }
 
     create() {
@@ -314,9 +350,10 @@ class MainScene extends Phaser.Scene {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
         
-        this.cellSize = Math.min(110, Math.floor((width - 20) / 6), Math.floor((height - 380) / 6));
+        // Dynamic sizing for narrower/taller screens
+        this.cellSize = Math.min(125, Math.floor((width - 40) / 6), Math.floor((height - 500) / 6));
         this.gridOffsetX = (width - (this.gridSize * this.cellSize)) / 2 + (this.cellSize / 2);
-        this.gridOffsetY = Math.floor(height * 0.25);
+        this.gridOffsetY = Math.floor(height * 0.30);
 
         // Background starfield (parallax layers)
         this.starLayers = [];
@@ -349,9 +386,19 @@ class MainScene extends Phaser.Scene {
 
         // Top UI
         const l = getLang();
-        this.add.text(width/2, 50, T[l].title, { fontSize: '40px', fill: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        this.add.text(width/2, 50, T[l].title, { fontSize: '40px', fill: '#fff', fontFamily: FONT_FAMILY, fontStyle: 'bold' }).setOrigin(0.5);
+
+        // Score Cards Graphics
+        const cardBg = this.add.graphics();
+        cardBg.fillStyle(0x000000, 0.4);
+        cardBg.fillRoundedRect(10, 110, 220, 40, 10); // Score card
+        cardBg.fillRoundedRect(width - 230, 110, 220, 40, 10); // Highscore card
         
-        this.scoreText = this.add.text(20, 120, T[l].score + '0', { fontSize: '32px', fill: '#ffd700' });
+        cardBg.lineStyle(1, 0x00e5ff, 0.3);
+        cardBg.strokeRoundedRect(10, 110, 220, 40, 10);
+        cardBg.strokeRoundedRect(width - 230, 110, 220, 40, 10);
+
+        this.scoreText = this.add.text(20, 115, T[l].score + formatNumber(0), { fontFamily: FONT_FAMILY, fontSize: '28px', fill: '#ffd700', shadow: { offsetX: 1, offsetY: 1, color: '#000', blur: 2, fill: true } });
         
         // Progress Indicator UI
         this.maxUnlockedTier = 3; // Starts assuming they have tier 3 from spawn
@@ -362,20 +409,20 @@ class MainScene extends Phaser.Scene {
         // Try to load high score
         const savedScore = localStorage.getItem('cosmic_highscore');
         if (savedScore) this.highScore = parseInt(savedScore, 10);
-        this.highScoreText = this.add.text(width - 20, 120, T[l].highscore + this.highScore, { fontSize: '32px', fill: '#aaa' }).setOrigin(1, 0);
+        this.highScoreText = this.add.text(width - 20, 115, T[l].highscore + formatNumber(this.highScore), { fontFamily: FONT_FAMILY, fontSize: '28px', fill: '#aaa', shadow: { offsetX: 1, offsetY: 1, color: '#000', blur: 2, fill: true } }).setOrigin(1, 0);
 
         // Try to load cloud save
         if (player) {
             player.getData(['score', 'highScore', 'grid']).then(data => {
                 if (data.highScore) {
                     this.highScore = data.highScore;
-                    this.highScoreText.setText(T[getLang()].highscore + this.highScore);
+                    this.highScoreText.setText(T[getLang()].highscore + formatNumber(this.highScore));
                     localStorage.setItem('cosmic_highscore', this.highScore.toString());
                 }
                 if (data.score) {
                     this.score = data.score;
                     this.displayScore = data.score;
-                    this.scoreText.setText(T[getLang()].score + this.score);
+                    this.scoreText.setText(T[getLang()].score + formatNumber(this.score));
                 }
                 if (data.grid && Array.isArray(data.grid) && data.grid.length === this.gridSize) {
                     let valid = true;
@@ -426,10 +473,10 @@ class MainScene extends Phaser.Scene {
         });
 
         // Rewarded Ad Button
-        this.rewardedBtnContainer = this.add.container(width/2, 180);
+        this.rewardedBtnContainer = this.add.container(width/2, 215);
         const btnBg = this.add.image(0, 0, 'button_bg').setOrigin(0.5).setScale(0.95, 0.8);
         const btnText = this.add.text(0, 0, T[getLang()].watch_ad, {
-            fontSize: '16px',
+            fontFamily: FONT_FAMILY, fontSize: '16px',
             fill: '#fff',
             fontStyle: 'bold',
             shadow: { offsetX: 2, offsetY: 2, color: '#000', blur: 4, fill: true }
@@ -438,23 +485,45 @@ class MainScene extends Phaser.Scene {
 
         btnBg.setInteractive({ useHandCursor: true });
         btnBg.on('pointerdown', () => {
-            btnBg.setTint(0xaaaaaa);
+            this.tweens.killTweensOf(this.rewardedBtnContainer);
             this.tweens.add({
                 targets: this.rewardedBtnContainer,
-                scaleX: 0.95,
-                scaleY: 0.95,
+                scaleX: 0.85,
+                scaleY: 0.85,
                 duration: 100,
+                ease: 'Back.easeIn',
                 yoyo: true,
                 onComplete: () => {
-                    btnBg.clearTint();
                     this.showRewardedAd();
                 }
             });
         });
-        btnBg.on('pointerover', () => { btnBg.setTint(0xdddddd); });
-        btnBg.on('pointerout', () => { btnBg.clearTint(); });
+        btnBg.on('pointerover', () => {
+            this.tweens.add({
+                targets: this.rewardedBtnContainer,
+                scaleX: 1.05,
+                scaleY: 1.05,
+                duration: 200,
+                ease: 'Sine.easeOut'
+            });
+        });
+        btnBg.on('pointerout', () => {
+            this.tweens.add({
+                targets: this.rewardedBtnContainer,
+                scaleX: 1,
+                scaleY: 1,
+                duration: 200,
+                ease: 'Sine.easeOut'
+            });
+        });
         
         this.rewardedBtn = this.rewardedBtnContainer; // Reference for visibility toggling
+
+        // Disable button gracefully if SDK is unavailable
+        if (!ysdk || !ysdk.adv || !ysdk.adv.showRewardedVideo) {
+            this.rewardedBtn.setVisible(false);
+            this.rewardedBtn.setAlpha(0);
+        }
 
         this.initGrid();
         
@@ -470,6 +539,83 @@ class MainScene extends Phaser.Scene {
         if (ysdk && ysdk.features.GameplayAPI) {
             ysdk.features.GameplayAPI.start();
         }
+
+        this.checkOfflineIncome();
+    }
+
+    checkOfflineIncome() {
+        const lastActiveStr = localStorage.getItem('cosmic_last_active');
+        const now = Date.now();
+
+        if (lastActiveStr && this.score > 100) {
+            const lastActive = parseInt(lastActiveStr, 10);
+            const diffHours = (now - lastActive) / (1000 * 60 * 60);
+
+            if (diffHours >= 1) {
+                // Max 24 hours of offline income
+                const hoursToReward = Math.min(diffHours, 24);
+                // Rough estimate of earning power based on max tier
+                const earningPower = (this.tierPoints[this.maxUnlockedTier] || 10) * 2;
+                const offlineEarnings = Math.floor(hoursToReward * earningPower);
+
+                if (offlineEarnings > 0) {
+                    this.showOfflinePopup(offlineEarnings);
+                }
+            }
+        }
+
+        localStorage.setItem('cosmic_last_active', now.toString());
+    }
+
+    showOfflinePopup(amount) {
+        const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
+
+        const overlay = this.add.rectangle(width/2, height/2, width, height, 0x000000, 0.7);
+        overlay.setInteractive(); // Block clicks
+
+        const popup = this.add.container(width/2, height/2);
+
+        const cardBg = this.add.graphics();
+        cardBg.fillStyle(0x1a1a3a, 1);
+        cardBg.fillRoundedRect(-150, -100, 300, 200, 20);
+        cardBg.lineStyle(3, 0x00e5ff, 1);
+        cardBg.strokeRoundedRect(-150, -100, 300, 200, 20);
+
+        const l = getLang();
+        const titleText = this.add.text(0, -60, l === 'ru' ? 'ОФФЛАЙН ДОХОД' : 'OFFLINE INCOME', { fontFamily: FONT_FAMILY, fontSize: '24px', fill: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        const amountText = this.add.text(0, -10, '+' + formatNumber(amount), { fontFamily: FONT_FAMILY, fontSize: '36px', fill: '#ffd700', shadow: { offsetX: 1, offsetY: 1, color: '#000', blur: 2, fill: true } }).setOrigin(0.5);
+
+        const claimBtnBg = this.add.image(0, 50, 'button_bg').setOrigin(0.5).setScale(0.6, 0.5);
+        const claimBtnText = this.add.text(0, 50, l === 'ru' ? 'ЗАБРАТЬ' : 'CLAIM', { fontFamily: FONT_FAMILY, fontSize: '20px', fill: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+
+        popup.add([cardBg, titleText, amountText, claimBtnBg, claimBtnText]);
+
+        popup.setScale(0);
+        this.tweens.add({
+            targets: popup,
+            scaleX: 1,
+            scaleY: 1,
+            duration: 400,
+            ease: 'Back.easeOut'
+        });
+
+        claimBtnBg.setInteractive({ useHandCursor: true });
+        claimBtnBg.on('pointerdown', () => {
+            this.tweens.add({
+                targets: popup,
+                scaleX: 0,
+                scaleY: 0,
+                duration: 300,
+                ease: 'Back.easeIn',
+                onComplete: () => {
+                    overlay.destroy();
+                    popup.destroy();
+                    this.addScore(amount);
+                    this.spawnParticles(width/2, height/2, 0xffd700, 50);
+                }
+            });
+        });
     }
 
     update() {
@@ -487,7 +633,7 @@ class MainScene extends Phaser.Scene {
         const barWidth = width - 40;
         const barHeight = 10;
         const x = 20;
-        const y = 160;
+        const y = 175;
 
         this.progressBg.clear();
         this.progressBg.fillStyle(0x1a1a3a, 1);
@@ -700,6 +846,7 @@ class MainScene extends Phaser.Scene {
                 scaleX: 1.2,
                 scaleY: 0.8,
                 duration: 100,
+                ease: 'Sine.easeInOut',
                 yoyo: true
             });
         }
@@ -711,7 +858,7 @@ class MainScene extends Phaser.Scene {
             scaleX: 0.8, // stretch while moving
             scaleY: 1.2,
             duration: 200,
-            ease: 'Power2',
+            ease: 'Sine.easeInOut',
             onComplete: () => {
                 sprite1.destroy();
                 this.upgradeCell(r2, c2, nextTier);
@@ -759,15 +906,15 @@ class MainScene extends Phaser.Scene {
             scaleX: 1,
             scaleY: 1,
             duration: 400,
-            ease: 'Elastic.easeOut',
+            ease: 'Back.easeOut',
             onComplete: () => {
-                // Idle pulse for higher tiers
-                if (tier >= 4 && cell.sprite) {
+                // Idle pulse for all tiers
+                if (cell.sprite) {
                     this.tweens.add({
                         targets: cell.sprite,
-                        scaleX: 1.05,
-                        scaleY: 1.05,
-                        duration: 1000,
+                        scaleX: 1.03,
+                        scaleY: 1.03,
+                        duration: 1500,
                         yoyo: true,
                         repeat: -1,
                         ease: 'Sine.easeInOut'
@@ -794,7 +941,7 @@ class MainScene extends Phaser.Scene {
 
     showFloatingText(x, y, text, color) {
         const t = this.add.text(x, y, text, {
-            fontSize: '28px',
+            fontFamily: FONT_FAMILY, fontSize: '28px',
             fill: '#ffffff',
             fontStyle: 'bold',
             stroke: '#000000',
@@ -878,6 +1025,7 @@ class MainScene extends Phaser.Scene {
         }
         
         this.isProcessing = false;
+        localStorage.setItem('cosmic_last_active', Date.now().toString());
     }
 
     hasPossibleMerges() {
@@ -932,13 +1080,13 @@ class MainScene extends Phaser.Scene {
             duration: 500,
             ease: 'Power2',
             onUpdate: () => {
-                this.scoreText.setText(T[getLang()].score + Math.floor(this.displayScore));
+                this.scoreText.setText(T[getLang()].score + formatNumber(Math.floor(this.displayScore)));
             }
         });
 
         if (this.score > this.highScore) {
             this.highScore = this.score;
-            this.highScoreText.setText(T[getLang()].highscore + this.highScore);
+            this.highScoreText.setText(T[getLang()].highscore + formatNumber(this.highScore));
             localStorage.setItem('cosmic_highscore', this.highScore.toString());
         }
         this.updateBackgroundGradient();
@@ -954,7 +1102,21 @@ class MainScene extends Phaser.Scene {
         let ratio = currentTierProgress / ptsNeeded;
         if (this.maxUnlockedTier === 7) ratio = 1;
 
-        this.drawProgressBar(this.cameras.main.width, ratio);
+        // Ensure ratio only goes up smoothly, avoiding weird jumps backwards within a tier unless it wrapped around
+        if (ratio < this.currentProgressRatio && this.currentProgressRatio > 0.9) {
+            this.currentProgressRatio = 0; // Wrap around safely
+        }
+
+        this.tweens.killTweensOf(this, 'currentProgressRatio');
+        this.tweens.add({
+            targets: this,
+            currentProgressRatio: ratio,
+            duration: 300,
+            ease: 'Power2',
+            onUpdate: () => {
+                this.drawProgressBar(this.cameras.main.width, this.currentProgressRatio);
+            }
+        });
     }
 
     gameOver() {
@@ -978,14 +1140,14 @@ class MainScene extends Phaser.Scene {
         const overlay = this.add.rectangle(width/2, height/2, width, height, 0x000000, 0.8);
         const l = getLang();
         const goText = this.add.text(width/2, height/2 - 100, T[l].game_over, {
-            fontSize: '48px',
+            fontFamily: FONT_FAMILY, fontSize: '48px',
             fill: '#ff4444',
             fontStyle: 'bold',
             shadow: { offsetX: 2, offsetY: 2, color: '#000', blur: 5, fill: true }
         }).setOrigin(0.5);
         
-        const scoreText = this.add.text(width/2, height/2 - 30, T[l].score_go + this.score, {
-            fontSize: '36px', 
+        const scoreText = this.add.text(width/2, height/2 - 30, T[l].score_go + formatNumber(this.score), {
+            fontFamily: FONT_FAMILY, fontSize: '36px',
             fill: '#fff',
             shadow: { offsetX: 2, offsetY: 2, color: '#000', blur: 3, fill: true }
         }).setOrigin(0.5);
@@ -1035,23 +1197,43 @@ class MainScene extends Phaser.Scene {
 
         btnBg.setInteractive({ useHandCursor: true });
         btnBg.on('pointerdown', () => {
-            btnBg.setTint(0xaaaaaa);
+            this.tweens.killTweensOf(restartBtnContainer);
             this.tweens.add({
                 targets: restartBtnContainer,
-                scaleX: 0.95,
-                scaleY: 0.95,
+                scaleX: 0.85,
+                scaleY: 0.85,
                 duration: 100,
+                ease: 'Back.easeIn',
                 yoyo: true,
                 onComplete: () => {
-                    btnBg.clearTint();
                     this.scene.restart();
                 }
             });
         });
-        btnBg.on('pointerover', () => { btnBg.setTint(0xdddddd); });
-        btnBg.on('pointerout', () => { btnBg.clearTint(); });
+        btnBg.on('pointerover', () => {
+            this.tweens.add({
+                targets: restartBtnContainer,
+                scaleX: 1.05,
+                scaleY: 1.05,
+                duration: 200,
+                ease: 'Sine.easeOut'
+            });
+        });
+        btnBg.on('pointerout', () => {
+            this.tweens.add({
+                targets: restartBtnContainer,
+                scaleX: 1,
+                scaleY: 1,
+                duration: 200,
+                ease: 'Sine.easeOut'
+            });
+        });
     }
 }
+
+const windowRatio = window.innerHeight / window.innerWidth;
+const baseWidth = 800;
+const dynamicHeight = Math.max(1200, Math.floor(baseWidth * windowRatio));
 
 const config = {
     type: Phaser.AUTO,
@@ -1059,8 +1241,8 @@ const config = {
         mode: Phaser.Scale.FIT,
         parent: 'game-container',
         autoCenter: Phaser.Scale.CENTER_BOTH,
-        width: 800,
-        height: 1200
+        width: baseWidth,
+        height: dynamicHeight
     },
     transparent: true,
     scene: [BootScene, MainScene]
