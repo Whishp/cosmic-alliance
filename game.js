@@ -23,7 +23,13 @@ const T = {
         watch_ad: 'Смотреть рекламу: 2x Очки на 1 ход!',
         game_over: 'ИГРА ОКОНЧЕНА',
         play_again: 'ИГРАТЬ СНОВА',
-        merges: 'СЛИЯНИЯ: '
+        merges: 'СЛИЯНИЯ: ',
+        tutorial_title: 'КАК ИГРАТЬ',
+        tutorial_step1: '1. Нажмите на элемент, чтобы выбрать его.',
+        tutorial_step2: '2. Нажмите на такой же элемент, чтобы объединить их.',
+        tutorial_step3: '3. Объединяйте элементы более высоких уровней для получения очков.',
+        tutorial_step4: '4. Нажмите на пустую клетку, чтобы переместить выбранный элемент.',
+        tutorial_ok: 'ПОНЯТНО'
     },
     en: {
         title: 'COSMIC ALLIANCE',
@@ -33,7 +39,13 @@ const T = {
         watch_ad: 'Watch Ad: 2x Points for 1 turn!',
         game_over: 'GAME OVER',
         play_again: 'PLAY AGAIN',
-        merges: 'MERGES: '
+        merges: 'MERGES: ',
+        tutorial_title: 'HOW TO PLAY',
+        tutorial_step1: '1. Tap a piece to select it.',
+        tutorial_step2: '2. Tap a matching piece to merge them.',
+        tutorial_step3: '3. Merge higher tiers for more points.',
+        tutorial_step4: '4. Tap an empty cell to move the selected piece.',
+        tutorial_ok: 'GOT IT'
     }
 };
 
@@ -344,6 +356,8 @@ class MainScene extends Phaser.Scene {
         this.rewardedBtn = null;
         this.doublePointsTurns = 0;
         this.currentProgressRatio = 0;
+        this.activeHints = [];
+        this.hintTimer = null;
     }
 
     init() {
@@ -360,6 +374,8 @@ class MainScene extends Phaser.Scene {
         this.maxUnlockedTier = 3;
         this.currentProgressRatio = 0;
         this.particleEmitter = null;
+        this.activeHints = [];
+        this.hintTimer = null;
     }
 
     create() {
@@ -593,6 +609,18 @@ class MainScene extends Phaser.Scene {
         }
 
         this.checkOfflineIncome();
+
+        if (localStorage.getItem('alliance_tutorial_done') !== 'true') {
+            this.showTutorial();
+        } else {
+            this.resetHintTimer();
+        }
+
+        this.input.on('pointerdown', () => {
+            if (localStorage.getItem('alliance_tutorial_done') === 'true') {
+                this.resetHintTimer();
+            }
+        });
     }
 
     checkOfflineIncome() {
@@ -815,6 +843,123 @@ class MainScene extends Phaser.Scene {
                 });
             }
         });
+    }
+
+    showTutorial() {
+        const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
+        const l = getLang();
+
+        const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.85);
+        overlay.setInteractive(); // block clicks
+
+        const popup = this.add.container(width / 2, height / 2);
+
+        const cardBg = this.add.graphics();
+        cardBg.fillStyle(0x1a1a3a, 1);
+        cardBg.fillRoundedRect(-180, -200, 360, 400, 20);
+        cardBg.lineStyle(3, 0x00e5ff, 1);
+        cardBg.strokeRoundedRect(-180, -200, 360, 400, 20);
+
+        const titleText = this.add.text(0, -160, T[l].tutorial_title, { fontFamily: FONT_FAMILY, fontSize: '28px', fill: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        this.setShadow(titleText, '#00e5ff', 10);
+
+        const textConfig = { fontFamily: FONT_FAMILY, fontSize: '18px', fill: '#ccc', wordWrap: { width: 320, useAdvancedWrap: true } };
+        const step1 = this.add.text(-150, -100, T[l].tutorial_step1, textConfig);
+        const step2 = this.add.text(-150, -50, T[l].tutorial_step2, textConfig);
+        const step3 = this.add.text(-150, 10, T[l].tutorial_step3, textConfig);
+        const step4 = this.add.text(-150, 70, T[l].tutorial_step4, textConfig);
+
+        const okBtn = this.createStyledButton(0, 150, T[l].tutorial_ok, () => {
+            localStorage.setItem('alliance_tutorial_done', 'true');
+            this.tweens.add({
+                targets: popup,
+                scaleX: 0,
+                scaleY: 0,
+                duration: 300,
+                ease: 'Back.easeIn',
+                onComplete: () => {
+                    overlay.destroy();
+                    popup.destroy();
+                    this.resetHintTimer();
+                }
+            });
+        });
+
+        popup.add([cardBg, titleText, step1, step2, step3, step4, okBtn]);
+
+        popup.setScale(0);
+        this.tweens.add({
+            targets: popup,
+            scaleX: 1,
+            scaleY: 1,
+            duration: 400,
+            ease: 'Back.easeOut'
+        });
+    }
+
+    resetHintTimer() {
+        this.clearHints();
+        if (this.hintTimer) {
+            this.hintTimer.remove(false);
+        }
+        this.hintTimer = this.time.delayedCall(10000, () => {
+            if (!this.isProcessing && !this.selectedCell) {
+                this.showHint();
+            }
+        });
+    }
+
+    clearHints() {
+        for (const hint of this.activeHints) {
+            const cell = this.grid[hint.r][hint.c];
+            if (cell && cell.highlight) {
+                this.tweens.killTweensOf(cell.highlight);
+                // Only hide if it's not currently selected
+                if (!this.selectedCell || this.selectedCell.row !== hint.r || this.selectedCell.col !== hint.c) {
+                    cell.highlight.setVisible(false);
+                }
+                cell.highlight.setAlpha(1);
+            }
+        }
+        this.activeHints = [];
+    }
+
+    showHint() {
+        for (let r = 0; r < this.gridSize; r++) {
+            for (let c = 0; c < this.gridSize; c++) {
+                const cell = this.grid[r][c];
+                if (cell.tier > 0 && cell.tier < 7) {
+                    if (c < this.gridSize - 1 && this.grid[r][c+1].tier === cell.tier) {
+                        this.applyHintAnimation(r, c);
+                        this.applyHintAnimation(r, c+1);
+                        return;
+                    }
+                    if (r < this.gridSize - 1 && this.grid[r+1][c].tier === cell.tier) {
+                        this.applyHintAnimation(r, c);
+                        this.applyHintAnimation(r+1, c);
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    applyHintAnimation(r, c) {
+        const cell = this.grid[r][c];
+        if (cell && cell.highlight) {
+            cell.highlight.setVisible(true);
+            cell.highlight.setAlpha(0.2);
+            this.tweens.add({
+                targets: cell.highlight,
+                alpha: 0.8,
+                duration: 800,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut'
+            });
+            this.activeHints.push({r, c});
+        }
     }
 
     drawBackground() {
