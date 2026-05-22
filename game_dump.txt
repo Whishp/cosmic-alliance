@@ -35,11 +35,7 @@ const T = {
         prestigeMultiplier: 'Множитель',
         prestigeConfirm: 'Сбросить прогресс ради множителя очков?',
         dailyChallenge: 'Ежедневный вызов',
-        dailyReward: 'Награда',
-        achievement: 'ДОСТИЖЕНИЕ',
-        unlocked_tier: 'Открыт новый уровень',
-        score_milestone: 'Достигнут счет',
-        buyCell: 'Купить'
+        dailyReward: 'Награда'
     },
     en: {
         title: 'COSMIC ALLIANCE',
@@ -60,11 +56,7 @@ const T = {
         prestigeMultiplier: 'Multiplier',
         prestigeConfirm: 'Reset progress for a score multiplier?',
         dailyChallenge: 'Daily Challenge',
-        dailyReward: 'Reward',
-        achievement: 'ACHIEVEMENT',
-        unlocked_tier: 'New Tier Unlocked',
-        score_milestone: 'Score Milestone Reached',
-        buyCell: 'Buy'
+        dailyReward: 'Reward'
     }
 };
 
@@ -89,55 +81,55 @@ const SoundManager = {
         if (isMuted) return;
         this.initCtx();
         if (!audioCtx) return;
-        
+
         const oscillator = audioCtx.createOscillator();
         const gainNode = audioCtx.createGain();
-        
+
         oscillator.type = type;
         oscillator.frequency.setValueAtTime(frequency, audioCtx.currentTime);
-        
+
         gainNode.gain.setValueAtTime(vol, audioCtx.currentTime);
         gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
-        
+
         oscillator.connect(gainNode);
         gainNode.connect(audioCtx.destination);
-        
+
         oscillator.start();
         oscillator.stop(audioCtx.currentTime + duration);
     },
-    
+
     playClick: function() {
         this.playTone(400, 'sine', 0.1, 0.05);
     },
-    
+
     playMerge: function(tier) {
         const baseFreq = 300;
         this.playTone(baseFreq + (tier * 100), 'triangle', 0.2, 0.1);
     },
-    
+
     playCombo: function(comboCount) {
         const freq = 400 + (comboCount * 150);
         this.playTone(freq, 'square', 0.15, 0.05);
     },
-    
+
     playGameOver: function() {
         if (isMuted) return;
         this.initCtx();
         if (!audioCtx) return;
-        
+
         const oscillator = audioCtx.createOscillator();
         const gainNode = audioCtx.createGain();
-        
+
         oscillator.type = 'sawtooth';
         oscillator.frequency.setValueAtTime(400, audioCtx.currentTime);
         oscillator.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 1.5);
-        
+
         gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
         gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.5);
-        
+
         oscillator.connect(gainNode);
         gainNode.connect(audioCtx.destination);
-        
+
         oscillator.start();
         oscillator.stop(audioCtx.currentTime + 1.5);
     }
@@ -156,20 +148,20 @@ class BootScene extends Phaser.Scene {
             YaGames.init().then(_ysdk => {
                 ysdk = _ysdk;
                 ysdk.features.LoadingAPI?.ready();
-                
+
                 let promises = [];
                 promises.push(ysdk.getPlayer().then(_player => {
                     player = _player;
                 }).catch(err => {
                     // silent fallback
                 }));
-                
+
                 promises.push(ysdk.getLeaderboards().then(_lb => {
                     leaderboard = _lb;
                 }).catch(err => {
                     // silent fallback
                 }));
-                
+
                 Promise.all(promises).then(() => {
                     this.scene.start('Main');
                 });
@@ -185,7 +177,7 @@ class BootScene extends Phaser.Scene {
 
     generateTextures() {
         const graphics = this.make.graphics();
-        
+
         // Neon dark cosmic theme
 
         // 1. Астероид (Asteroid) — Dark gray with cyan neon
@@ -199,7 +191,7 @@ class BootScene extends Phaser.Scene {
         graphics.fillCircle(65, 60, 6);
         graphics.fillCircle(45, 70, 4);
         graphics.generateTexture('tier_1', 100, 100);
-        
+
         // 2. Луна (Moon) — Dark blue with magenta neon
         graphics.clear();
         graphics.fillStyle(0x1a1a3a, 1);
@@ -211,7 +203,7 @@ class BootScene extends Phaser.Scene {
         graphics.fillCircle(60, 60, 14);
         graphics.fillCircle(65, 35, 7);
         graphics.generateTexture('tier_2', 100, 100);
-        
+
         // 3. Планета (Planet) — Deep green with bright green/yellow neon
         graphics.clear();
         graphics.fillStyle(0x0a2a1a, 1);
@@ -223,7 +215,7 @@ class BootScene extends Phaser.Scene {
         graphics.fillCircle(65, 45, 10);
         graphics.fillCircle(40, 70, 12);
         graphics.generateTexture('tier_3', 100, 100);
-        
+
         // 4. Звезда (Star) — Deep gold with bright yellow neon core
         graphics.clear();
         graphics.fillStyle(0x332200, 1);
@@ -233,7 +225,7 @@ class BootScene extends Phaser.Scene {
         graphics.fillStyle(0xffffaa, 0.8);
         graphics.fillCircle(50, 50, 15);
         graphics.generateTexture('tier_4', 100, 100);
-        
+
         // 5. Сверхновая (Supernova) — Dark red/orange with fiery neon
         graphics.clear();
         graphics.fillStyle(0x441100, 1);
@@ -249,7 +241,7 @@ class BootScene extends Phaser.Scene {
             graphics.strokePath();
         }
         graphics.generateTexture('tier_5', 100, 100);
-        
+
         // 6. Галактика (Galaxy) — Deep space with bright purple neon spirals
         graphics.clear();
         graphics.fillStyle(0x110022, 1);
@@ -264,7 +256,7 @@ class BootScene extends Phaser.Scene {
         graphics.fillStyle(0xffffff, 0.8);
         graphics.fillCircle(50, 50, 8);
         graphics.generateTexture('tier_6', 100, 100);
-        
+
         // 7. Черная дыра (Black Hole) — Pitch black with white/cyan neon event horizon
         graphics.clear();
         graphics.fillStyle(0x000000, 1);
@@ -276,7 +268,7 @@ class BootScene extends Phaser.Scene {
         graphics.lineStyle(1, 0xbb00ff, 0.5);
         graphics.strokeCircle(50, 50, 45);
         graphics.generateTexture('tier_7', 100, 100);
-        
+
         // Cell Background (Dark glassy look)
         graphics.clear();
         graphics.fillStyle(0x1a1a2e, 0.6);
@@ -284,7 +276,7 @@ class BootScene extends Phaser.Scene {
         graphics.lineStyle(2, 0x2a2a4a, 0.8);
         graphics.strokeRoundedRect(0, 0, 100, 100, 16);
         graphics.generateTexture('cell_bg', 100, 100);
-        
+
         // Selected Highlight (Neon cyan)
         graphics.clear();
         graphics.lineStyle(4, 0x00e5ff, 1);
@@ -293,7 +285,7 @@ class BootScene extends Phaser.Scene {
         graphics.lineStyle(8, 0x00e5ff, 0.3);
         graphics.strokeRoundedRect(0, 0, 100, 100, 16);
         graphics.generateTexture('cell_selected', 100, 100);
-        
+
         // Particle (Star shape or circle with glow)
         graphics.clear();
         graphics.fillStyle(0xffffff, 1);
@@ -393,7 +385,6 @@ class MainScene extends Phaser.Scene {
         this.selectedCell = null;
         this.isProcessing = false;
         this.maxUnlockedTier = 3;
-        this.lastMilestone = 0;
         this.currentProgressRatio = 0;
         this.particleEmitter = null;
         this.hintTimer = null;
@@ -407,7 +398,6 @@ class MainScene extends Phaser.Scene {
         this.mergeCountText = null;
         this.prestigeText = null;
         this.prestigeBtnObj = null;
-        this.buyButtons = [];
         this.rewardedBtn = null;
 
         if (this.isDailyChallenge) {
@@ -422,19 +412,19 @@ class MainScene extends Phaser.Scene {
         this.scale.on('resize', this.handleResize, this);
 
         this.input.mouse.disableContextMenu();
-        
+
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
-        
+
         // Dynamic sizing for narrower/taller screens
         let fontSize = '28px';
         if (width <= 600) {
-            this.cellSize = Math.min(Math.floor((width - 10) / 6), Math.floor((height - 250) / 6));
-            this.gridOffsetY = Math.floor(height * 0.20);
+            this.cellSize = Math.floor((width - 10) / 6);
+            this.gridOffsetY = Math.floor(height * 0.25);
             fontSize = '16px';
         } else {
-            this.cellSize = Math.min(125, Math.floor((width - 40) / 6), Math.floor((height - 400) / 6));
-            this.gridOffsetY = Math.floor(height * 0.25);
+            this.cellSize = Math.min(125, Math.floor((width - 40) / 6), Math.floor((height - 500) / 6));
+            this.gridOffsetY = Math.floor(height * 0.30);
         }
 
         this.gridOffsetX = (width - (this.gridSize * this.cellSize)) / 2 + (this.cellSize / 2);
@@ -487,7 +477,7 @@ class MainScene extends Phaser.Scene {
         cardBg.fillStyle(0x000000, 0.4);
         cardBg.fillRoundedRect(10, cardY, cardWidth, 40, 10); // Score card
         cardBg.fillRoundedRect(width - cardWidth - 10, cardY, cardWidth, 40, 10); // Highscore card
-        
+
         cardBg.lineStyle(1, 0x00e5ff, 0.3);
         cardBg.strokeRoundedRect(10, cardY, cardWidth, 40, 10);
         cardBg.strokeRoundedRect(width - cardWidth - 10, cardY, cardWidth, 40, 10);
@@ -497,10 +487,9 @@ class MainScene extends Phaser.Scene {
 
         this.scoreText = this.add.text(20, cardY + 5, T[l].score + formatNumber(0), { fontFamily: FONT_FAMILY, fontSize: fontSize, fill: '#ffd700' });
         this.setShadow(this.scoreText, '#ffd700', 10);
-        
+
         // Progress Indicator UI
-        this.maxUnlockedTier = 3;
-        this.lastMilestone = 0; // Starts assuming they have tier 3 from spawn
+        this.maxUnlockedTier = 3; // Starts assuming they have tier 3 from spawn
         this.progressBg = this.add.graphics();
         this.progressBar = this.add.graphics();
         this.drawProgressBar(width, 0);
@@ -527,7 +516,7 @@ class MainScene extends Phaser.Scene {
         }
 
         // Try to load cloud save
-        if (player && typeof player.getData === 'function') {
+        if (player) {
             player.getData(['score', 'highScore', 'grid', 'prestigeMultiplier', 'prestigeCount']).then(data => {
                 if (data.highScore) {
                     this.highScore = data.highScore;
@@ -658,7 +647,7 @@ class MainScene extends Phaser.Scene {
                 ease: 'Sine.easeOut'
             });
         });
-        
+
         this.rewardedBtn = this.rewardedBtnContainer; // Reference for visibility toggling
 
         // Disable button gracefully if SDK is unavailable
@@ -681,20 +670,8 @@ class MainScene extends Phaser.Scene {
             }
         }
 
-
-        // Buy Cell Buttons (Bulk Buy System)
-        const buyContainerY = height - 40;
-
-        const buy1Btn = this.createBuyButton(width / 2 - 120, buyContainerY, "x1", 1, 1);
-        const buy10Btn = this.createBuyButton(width / 2, buyContainerY, "x10", 10, 0.9);
-        const buy100Btn = this.createBuyButton(width / 2 + 120, buyContainerY, "x100", 100, 0.75);
-
-        this.buyButtons.push(buy1Btn, buy10Btn, buy100Btn);
-
         this.initGrid();
 
-        this.updateBuyButtons();
-        
         this.particleEmitter = this.add.particles('particle', {
             x: 0, y: 0,
             speed: { min: 50, max: 150 },
@@ -724,12 +701,12 @@ class MainScene extends Phaser.Scene {
 
         let fontSize = '28px';
         if (width <= 600) {
-            this.cellSize = Math.min(Math.floor((width - 10) / 6), Math.floor((height - 250) / 6));
-            this.gridOffsetY = Math.floor(height * 0.20);
+            this.cellSize = Math.floor((width - 10) / 6);
+            this.gridOffsetY = Math.floor(height * 0.25);
             fontSize = '16px';
         } else {
-            this.cellSize = Math.min(125, Math.floor((width - 40) / 6), Math.floor((height - 400) / 6));
-            this.gridOffsetY = Math.floor(height * 0.25);
+            this.cellSize = Math.min(125, Math.floor((width - 40) / 6), Math.floor((height - 500) / 6));
+            this.gridOffsetY = Math.floor(height * 0.30);
         }
 
         this.gridOffsetX = (width - (this.gridSize * this.cellSize)) / 2 + (this.cellSize / 2);
@@ -770,14 +747,6 @@ class MainScene extends Phaser.Scene {
         }
 
         // Update button positions
-
-        if (this.buyButtons && this.buyButtons.length === 3) {
-            const buyContainerY = height - 40;
-            this.buyButtons[0].setPosition(width / 2 - 120, buyContainerY);
-            this.buyButtons[1].setPosition(width / 2, buyContainerY);
-            this.buyButtons[2].setPosition(width / 2 + 120, buyContainerY);
-        }
-
         if (this.rewardedBtnContainer) {
             this.rewardedBtnContainer.setPosition(width / 2, 215);
         }
@@ -1090,124 +1059,6 @@ class MainScene extends Phaser.Scene {
         }
     }
 
-
-    updateBuyButtons() {
-        if (!this.buyButtons) return;
-        const l = getLang();
-        const baseCost = this.maxUnlockedTier * 50;
-
-        for (let btn of this.buyButtons) {
-            const count = btn.getData('count');
-            const discount = btn.getData('discount');
-            const cost = Math.floor(baseCost * count * discount);
-            btn.setData('cost', cost);
-
-            // Update text
-            const textObj = btn.getData('textObj');
-            if (textObj) {
-                textObj.setText(T[l].buyCell + " " + btn.getData('label') + "\n" + formatNumber(cost));
-            }
-
-            // Check if affordable and space available
-            const canAfford = this.score >= cost;
-            const emptyCells = this.getEmptyCells().length;
-            const hasSpace = emptyCells >= count;
-
-            if (canAfford && hasSpace) {
-                btn.setAlpha(1);
-            } else {
-                btn.setAlpha(0.5);
-            }
-        }
-    }
-
-    createBuyButton(x, y, label, count, discount) {
-        const container = this.add.container(x, y);
-        const paddingX = 15;
-        const paddingY = 10;
-        const l = getLang();
-
-        const btnText = this.add.text(0, 0, T[l].buyCell + " " + label + "\n--", {
-            fontFamily: FONT_FAMILY,
-            fontSize: '14px',
-            fill: '#ffffff',
-            fontStyle: 'bold',
-            align: 'center'
-        }).setOrigin(0.5);
-        this.setShadow(btnText, '#ffffff', 5);
-
-        const textWidth = 80;
-        const textHeight = 40;
-        const bgWidth = textWidth + paddingX * 2;
-        const bgHeight = textHeight + paddingY * 2;
-
-        const bg = this.add.graphics();
-        bg.fillGradientStyle(0x1a1a3a, 0x1a1a3a, 0x0a0a2a, 0x0a0a2a, 1);
-        bg.fillRoundedRect(-bgWidth/2, -bgHeight/2, bgWidth, bgHeight, 10);
-        bg.lineStyle(2, 0x00e5ff, 0.8);
-        bg.strokeRoundedRect(-bgWidth/2, -bgHeight/2, bgWidth, bgHeight, 10);
-
-        const hitArea = this.add.zone(0, 0, bgWidth, bgHeight).setInteractive({ useHandCursor: true });
-
-        container.add([bg, btnText, hitArea]);
-        container.setData('count', count);
-        container.setData('discount', discount);
-        container.setData('label', label);
-        container.setData('textObj', btnText);
-
-        hitArea.on('pointerdown', () => {
-            if (this.isProcessing) return;
-            const cost = container.getData('cost');
-            const canAfford = this.score >= cost;
-            const emptyCells = this.getEmptyCells().length;
-            const hasSpace = emptyCells >= count;
-
-            if (canAfford && hasSpace) {
-                this.isProcessing = true;
-
-                this.tweens.add({
-                    targets: container,
-                    scaleX: 0.85,
-                    scaleY: 0.85,
-                    duration: 100,
-                    ease: 'Back.easeIn',
-                    yoyo: true,
-                    onComplete: () => {
-                        this.score -= cost;
-                        this.displayScore = this.score;
-                        if (this.scoreText) {
-                            this.scoreText.setText(T[getLang()].score + formatNumber(this.displayScore));
-                        }
-
-                        SoundManager.playClick();
-
-                        let spawned = 0;
-                        for (let i = 0; i < count; i++) {
-                            if (this.spawnRandom()) {
-                                spawned++;
-                            }
-                        }
-
-                        this.saveCloudData();
-                        this.updateBuyButtons();
-                        this.isProcessing = false;
-                    }
-                });
-            } else {
-                // Shake effect if cannot afford or no space
-                this.tweens.add({
-                    targets: container,
-                    x: container.x + 5,
-                    duration: 50,
-                    yoyo: true,
-                    repeat: 3
-                });
-            }
-        });
-
-        return container;
-    }
-
     updateBackgroundGradient() {
         // Shift Phaser background gradient based on score progress
         const maxScoreBase = 10000;
@@ -1248,7 +1099,7 @@ class MainScene extends Phaser.Scene {
                 },
                 onClose: () => {
                     isMuted = false;
-                }, 
+                },
                 onError: (e) => {
                     // silent fallback
                     isMuted = false;
@@ -1288,17 +1139,17 @@ class MainScene extends Phaser.Scene {
             for (let col = 0; col < this.gridSize; col++) {
                 const x = this.gridOffsetX + col * this.cellSize;
                 const y = this.gridOffsetY + row * this.cellSize;
-                
+
                 // BG cell
                 this.add.image(x, y, 'cell_bg').setOrigin(0.5);
-                
+
                 // Selection highlight (hidden initially)
                 const highlight = this.add.image(x, y, 'cell_selected').setOrigin(0.5).setVisible(false);
-                
+
                 // Invisible interactive zone
                 const zone = this.add.zone(x, y, this.cellSize, this.cellSize).setInteractive();
                 zone.on('pointerdown', () => this.handleCellClick(row, col));
-                
+
                 this.grid[row][col] = {
                     tier: 0,
                     sprite: null,
@@ -1306,7 +1157,7 @@ class MainScene extends Phaser.Scene {
                 };
             }
         }
-        
+
         // Spawn initial items
         for (let i = 0; i < 5; i++) {
             this.spawnRandom();
@@ -1374,11 +1225,11 @@ class MainScene extends Phaser.Scene {
 
     handleCellClick(row, col) {
         if (this.isProcessing) return;
-        
+
         this.resetHintTimer();
 
         const cell = this.grid[row][col];
-        
+
         // Deselect logic
         if (this.selectedCell && this.selectedCell.row === row && this.selectedCell.col === col) {
             this.deselect();
@@ -1405,7 +1256,7 @@ class MainScene extends Phaser.Scene {
             const fromRow = this.selectedCell.row;
             const fromCol = this.selectedCell.col;
             this.deselect();
-            
+
             this.doMerge(fromRow, fromCol, row, col, targetTier, () => {
                 this.checkChainReactions(() => {
                     this.endTurn();
@@ -1478,14 +1329,14 @@ class MainScene extends Phaser.Scene {
         const sprite2 = this.grid[r2][c2].sprite;
         const targetX = this.gridOffsetX + c2 * this.cellSize;
         const targetY = this.gridOffsetY + r2 * this.cellSize;
-        
+
         this.grid[r1][c1].tier = 0;
         this.grid[r1][c1].sprite = null;
-        
+
         const nextTier = Math.min(tier + 1, 7);
-        
+
         SoundManager.playMerge(nextTier);
-        
+
         // Target cell anticipation squash
         if (sprite2) {
             this.tweens.add({
@@ -1509,7 +1360,7 @@ class MainScene extends Phaser.Scene {
             onComplete: () => {
                 sprite1.destroy();
                 this.upgradeCell(r2, c2, nextTier);
-                
+
                 // Score
                 let multiplier = this.comboMultiplier;
                 if (this.doublePointsActive) {
@@ -1521,7 +1372,7 @@ class MainScene extends Phaser.Scene {
                 const pts = Math.floor(this.tierPoints[nextTier] * multiplier);
                 this.addScore(pts);
                 this.showFloatingText(targetX, targetY - 20, `+${pts}`, this.tierColors[nextTier]);
-                
+
                 this.mergeCount++;
                 if (this.mergeCountText) {
                     this.mergeCountText.setText(T[getLang()].merges + this.mergeCount);
@@ -1542,20 +1393,18 @@ class MainScene extends Phaser.Scene {
             this.tweens.killTweensOf(cell.sprite);
             cell.sprite.destroy();
         }
-        
 
         cell.tier = tier;
         if (tier > this.maxUnlockedTier) {
             this.maxUnlockedTier = tier;
             this.showConfetti();
-            this.showAchievementPopup(T[getLang()].unlocked_tier, "Tier " + tier);
         }
 
         const x = this.gridOffsetX + c * this.cellSize;
         const y = this.gridOffsetY + r * this.cellSize;
-        
+
         cell.sprite = this.add.image(x, y, `tier_${tier}`);
-        
+
         // Pop effect with elastic bounce
         cell.sprite.setScale(0);
         this.tweens.add({
@@ -1579,14 +1428,14 @@ class MainScene extends Phaser.Scene {
                 }
             }
         });
-        
+
         this.spawnParticles(x, y, this.tierColors[tier]);
     }
 
     spawnParticles(x, y, color, count = 15) {
         if (!this.particleEmitter) return;
         this.particleEmitter.setPosition(x, y);
-        if (this.particleEmitter.setParticleTint) this.particleEmitter.setParticleTint(color); else this.particleEmitter.setTint(color);
+        this.particleEmitter.setTint(color);
         this.particleEmitter.explode(count);
 
         // Camera shake on big merges
@@ -1604,7 +1453,7 @@ class MainScene extends Phaser.Scene {
             stroke: '#000000',
             strokeThickness: 4
         }).setOrigin(0.5);
-        
+
         // Add color tint if valid
         if (color !== 0x000000) t.setTint(color);
 
@@ -1673,17 +1522,16 @@ class MainScene extends Phaser.Scene {
         for (let i = 0; i < numToSpawn; i++) {
             if (this.spawnRandom()) spawned++;
         }
-        
+
         this.saveCloudData();
 
         if (this.getEmptyCells().length === 0 && !this.hasPossibleMerges()) {
             this.gameOver();
             return;
         }
-        
+
         this.isProcessing = false;
         this.resetHintTimer();
-        this.updateBuyButtons();
         localStorage.setItem('cosmic_last_active', Date.now().toString());
     }
 
@@ -1715,31 +1563,21 @@ class MainScene extends Phaser.Scene {
     spawnRandom() {
         const empty = this.getEmptyCells();
         if (empty.length === 0) return false;
-        
+
         const target = this.rng.pick(empty);
-        
+
         // Weighted random tier (mostly 1 and 2)
         const rand = this.rng.frac();
         let tier = 1;
         if (rand > 0.8) tier = 2;
         if (rand > 0.95) tier = 3;
-        
+
         this.upgradeCell(target.r, target.c, tier);
         return true;
     }
 
-
     addScore(pts) {
         this.score += pts;
-
-        const milestones = [100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000];
-        for (let m of milestones) {
-            if (this.score >= m && this.lastMilestone < m) {
-                this.lastMilestone = m;
-                this.showAchievementPopup(T[getLang()].score_milestone, m.toString());
-                break;
-            }
-        }
 
         if (!this.isDailyChallenge && this.score > this.highScore) {
             this.highScore = this.score;
@@ -1758,7 +1596,6 @@ class MainScene extends Phaser.Scene {
 
         this.updateBackgroundGradient();
         this.updateProgressIndicator();
-        this.updateBuyButtons();
     }
 
     showPrestigeButton() {
@@ -1879,60 +1716,6 @@ class MainScene extends Phaser.Scene {
         }
     }
 
-
-    showAchievementPopup(titleStr, textStr) {
-        this.isProcessing = true;
-        const width = this.cameras.main.width;
-        const height = this.cameras.main.height;
-        const l = getLang();
-
-        const overlay = this.add.rectangle(width/2, height/2, width, height, 0x000000, 0.85);
-        overlay.setInteractive();
-
-        const popup = this.add.container(width/2, height/2);
-
-        const cardBg = this.add.graphics();
-        cardBg.fillStyle(0x1a1a3a, 1);
-        cardBg.fillRoundedRect(-180, -120, 360, 240, 20);
-        cardBg.lineStyle(3, 0xffd700, 1);
-        cardBg.strokeRoundedRect(-180, -120, 360, 240, 20);
-
-        const achTitle = this.add.text(0, -70, T[l].achievement, { fontFamily: FONT_FAMILY, fontSize: '28px', fill: '#ffd700', fontStyle: 'bold' }).setOrigin(0.5);
-        this.setShadow(achTitle, '#ffd700', 5);
-
-        const descText = this.add.text(0, -20, titleStr, { fontFamily: FONT_FAMILY, fontSize: '22px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
-        const valText = this.add.text(0, 20, textStr, { fontFamily: FONT_FAMILY, fontSize: '26px', fill: '#00e5ff', fontStyle: 'bold' }).setOrigin(0.5);
-
-        const okBtn = this.createStyledButton(0, 80, T[l].tutorial_ok, () => {
-            this.tweens.add({
-                targets: [popup, overlay],
-                alpha: 0,
-                duration: 300,
-                onComplete: () => {
-                    overlay.destroy();
-                    popup.destroy();
-                    this.isProcessing = false;
-                }
-            });
-        });
-
-        popup.add([cardBg, achTitle, descText, valText, okBtn]);
-        popup.setDepth(200);
-        overlay.setDepth(199);
-
-        popup.setAlpha(0);
-        overlay.setAlpha(0);
-
-        this.tweens.add({
-            targets: [popup, overlay],
-            alpha: 1,
-            duration: 300,
-            ease: 'Power2'
-        });
-
-        this.spawnParticles(width/2, height/2, 0xffd700, 50);
-    }
-
     showDailyChallengeComplete() {
         this.isProcessing = true;
         const width = this.cameras.main.width;
@@ -2017,7 +1800,7 @@ class MainScene extends Phaser.Scene {
 
     gameOver() {
         SoundManager.playGameOver();
-        
+
         if (ysdk && ysdk.features.GameplayAPI) {
             ysdk.features.GameplayAPI.stop();
         }
@@ -2029,10 +1812,10 @@ class MainScene extends Phaser.Scene {
                 }
             });
         }
-        
+
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
-        
+
         const overlay = this.add.rectangle(width/2, height/2, width, height, 0x000000, 0.8);
         const l = getLang();
         const goText = this.add.text(width/2, height/2 - 100, T[l].game_over, {
@@ -2041,7 +1824,7 @@ class MainScene extends Phaser.Scene {
             fontStyle: 'bold'
         }).setOrigin(0.5);
         this.setShadow(goText, '#000', 5);
-        
+
         const scoreText = this.add.text(width/2, height/2 - 30, T[l].score_go + formatNumber(this.score), {
             fontFamily: FONT_FAMILY, fontSize: '36px',
             fill: '#fff'
@@ -2080,7 +1863,7 @@ class MainScene extends Phaser.Scene {
         }).setOrigin(0.5);
         this.setShadow(btnText, '#000', 4);
         restartBtnContainer.add([btnBg, btnText]);
-        
+
         restartBtnContainer.setAlpha(0);
         this.tweens.add({
             targets: restartBtnContainer,
