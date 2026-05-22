@@ -6,7 +6,6 @@
     <title>Космический Альянс</title>
     <link rel="stylesheet" href="style.css">
     <script>
-    // Yandex Games SDK fallback for non-Yandex environment
     if (typeof YaGames === 'undefined') {
         window.YaGames = {
             init: () => Promise.resolve({
@@ -24,10 +23,11 @@
     }
     YaGames.init().then(sdk => { window.ysdk = sdk; }).catch(() => {});
     </script>
+    <script src="phaser.min.js"></script>
 </head>
 <body>
     <div id="bg-layer"></div>
     <div id="game-container"></div>
-    <script src="phaser-loader.js"></script>
+    <script src="game.js"></script>
 </body>
 </html>
