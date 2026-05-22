@@ -11,7 +11,7 @@
             init: () => Promise.resolve({
                 environment: { i18n: { lang: 'ru' } },
                 features: { LoadingAPI: { ready: () => {} }, GameplayAPI: { start: () => {}, stop: () => {} } },
-                getPlayer: () => Promise.resolve({ getName: () => 'Player', getPhoto: () => '', isAuthorized: () => false }),
+                getPlayer: () => Promise.resolve({ getName: () => 'Player', getPhoto: () => '', isAuthorized: () => false, getData: () => Promise.resolve({}), setData: () => Promise.resolve() }),
                 getLeaderboards: () => Promise.resolve({ setLeaderboardScore: () => Promise.resolve() }),
                 adv: {
                     showRewardedVideo: (cb) => { if(cb && cb.callbacks) cb.callbacks.onClose(); },
