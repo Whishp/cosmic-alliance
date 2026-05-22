@@ -35,7 +35,10 @@ const T = {
         prestigeMultiplier: 'Множитель',
         prestigeConfirm: 'Сбросить прогресс ради множителя очков?',
         dailyChallenge: 'Ежедневный вызов',
-        dailyReward: 'Награда'
+        dailyReward: 'Награда',
+        achievement: 'ДОСТИЖЕНИЕ',
+        unlocked_tier: 'Открыт уровень: ',
+        score_milestone: 'Счет достигнут: '
     },
     en: {
         title: 'COSMIC ALLIANCE',
@@ -56,7 +59,10 @@ const T = {
         prestigeMultiplier: 'Multiplier',
         prestigeConfirm: 'Reset progress for a score multiplier?',
         dailyChallenge: 'Daily Challenge',
-        dailyReward: 'Reward'
+        dailyReward: 'Reward',
+        achievement: 'ACHIEVEMENT',
+        unlocked_tier: 'Unlocked Tier: ',
+        score_milestone: 'Score Milestone: '
     }
 };
 
@@ -400,6 +406,8 @@ class MainScene extends Phaser.Scene {
         this.prestigeBtnObj = null;
         this.rewardedBtn = null;
 
+        this.passedMilestones = new Set();
+
         if (this.isDailyChallenge) {
             const dateStr = new Date().toISOString().split('T')[0];
             this.rng.init([dateStr]);
@@ -516,7 +524,7 @@ class MainScene extends Phaser.Scene {
         }
 
         // Try to load cloud save
-        if (player) {
+        if (player && typeof player.getData === 'function') {
             player.getData(['score', 'highScore', 'grid', 'prestigeMultiplier', 'prestigeCount']).then(data => {
                 if (data.highScore) {
                     this.highScore = data.highScore;
@@ -543,6 +551,10 @@ class MainScene extends Phaser.Scene {
                     this.score = data.score;
                     this.displayScore = data.score;
                     this.scoreText.setText(T[getLang()].score + formatNumber(this.score));
+                    const milestones = [1000, 5000, 10000, 25000, 50000, 100000, 500000, 1000000];
+                    for (let ms of milestones) {
+                        if (this.score >= ms) this.passedMilestones.add(ms);
+                    }
                 }
                 if (data.grid && Array.isArray(data.grid) && data.grid.length === this.gridSize && !this.isDailyChallenge) {
                     let valid = true;
@@ -574,7 +586,7 @@ class MainScene extends Phaser.Scene {
                             for (let c = 0; c < this.gridSize; c++) {
                                 const t = data.grid[r][c];
                                 if (t > 0) {
-                                    this.upgradeCell(r, c, t);
+                                    this.upgradeCell(r, c, t, true);
                                 }
                             }
                         }
@@ -671,6 +683,40 @@ class MainScene extends Phaser.Scene {
         }
 
         this.initGrid();
+
+        this.createBuyButtons();
+        this.buyButtons.forEach(btn => {
+            btn.hitArea.on('pointerdown', () => {
+                const cost = this.getBuyCost(btn.count, btn.discount);
+                if (this.score >= cost) {
+                    this.score -= cost;
+                    this.displayScore = this.score;
+                    if (this.scoreText) {
+                        this.scoreText.setText(T[getLang()].score + formatNumber(this.score));
+                    }
+                    this.updateBuyButtons();
+                    SoundManager.playClick();
+
+                    let spawned = 0;
+                    for (let i = 0; i < btn.count; i++) {
+                        if (this.spawnRandom()) {
+                            spawned++;
+                        }
+                    }
+                    if (spawned > 0) {
+                        this.checkChainReactions(() => {
+                            this.endTurn();
+                        });
+                    }
+                }
+            });
+            btn.hitArea.on('pointerover', () => {
+                this.drawBuyBtnBg(btn.bg, true);
+            });
+            btn.hitArea.on('pointerout', () => {
+                this.drawBuyBtnBg(btn.bg, false);
+            });
+        });
         
         this.particleEmitter = this.add.particles('particle', {
             x: 0, y: 0,
@@ -755,6 +801,10 @@ class MainScene extends Phaser.Scene {
         }
         if (this.prestigeBtnObj) {
             this.prestigeBtnObj.setPosition(width / 2, 330);
+        }
+
+        if (this.buyContainer) {
+            this.buyContainer.setPosition(width / 2, this.gridOffsetY + (this.gridSize * this.cellSize) + 40);
         }
     }
 
@@ -906,6 +956,79 @@ class MainScene extends Phaser.Scene {
 
     setShadow(textObj, color, blur) {
         textObj.setShadow(0, 0, color, blur, true);
+    }
+
+    getBuyCost(count, discount) {
+        return Math.floor(this.maxUnlockedTier * 50 * count * discount);
+    }
+
+    createBuyButtons() {
+        this.buyContainer = this.add.container(0, 0);
+        this.buyButtons = [];
+
+        const configs = [
+            { id: 'buy_x1', text: 'x1', count: 1, discount: 1, xOffset: -120 },
+            { id: 'buy_x10', text: 'x10', count: 10, discount: 0.9, xOffset: 0 },
+            { id: 'buy_x100', text: 'x100', count: 100, discount: 0.75, xOffset: 120 }
+        ];
+
+        configs.forEach(cfg => {
+            const btnContainer = this.add.container(cfg.xOffset, 0);
+
+            const bg = this.add.graphics();
+            this.drawBuyBtnBg(bg, false);
+
+            const btnText = this.add.text(0, -10, cfg.text, {
+                fontFamily: FONT_FAMILY, fontSize: '18px', fill: '#fff', fontStyle: 'bold'
+            }).setOrigin(0.5);
+            this.setShadow(btnText, '#fff', 5);
+
+            const costText = this.add.text(0, 10, "0", {
+                fontFamily: FONT_FAMILY, fontSize: '14px', fill: '#ffd700'
+            }).setOrigin(0.5);
+
+            const hitArea = this.add.zone(0, 0, 100, 50).setInteractive({ useHandCursor: true });
+
+            btnContainer.add([bg, btnText, costText, hitArea]);
+            this.buyContainer.add(btnContainer);
+
+            this.buyButtons.push({
+                container: btnContainer,
+                bg: bg,
+                costText: costText,
+                count: cfg.count,
+                discount: cfg.discount,
+                hitArea: hitArea
+            });
+        });
+    }
+
+    drawBuyBtnBg(bg, hover) {
+        bg.clear();
+        if (hover) {
+            bg.fillGradientStyle(0x2a2a5a, 0x2a2a5a, 0x1a1a3a, 0x1a1a3a, 1);
+            bg.lineStyle(2, 0xff00ff, 1);
+        } else {
+            bg.fillGradientStyle(0x1a1a3a, 0x1a1a3a, 0x0a0a2a, 0x0a0a2a, 1);
+            bg.lineStyle(2, 0x00e5ff, 0.8);
+        }
+        bg.fillRoundedRect(-50, -25, 100, 50, 10);
+        bg.strokeRoundedRect(-50, -25, 100, 50, 10);
+    }
+
+    updateBuyButtons() {
+        if (!this.buyButtons) return;
+
+        this.buyButtons.forEach(btn => {
+            const cost = this.getBuyCost(btn.count, btn.discount);
+            btn.costText.setText(formatNumber(cost));
+
+            if (this.score >= cost) {
+                btn.container.setAlpha(1);
+            } else {
+                btn.container.setAlpha(0.5);
+            }
+        });
     }
 
     createStyledButton(x, y, text, onClick) {
@@ -1324,6 +1447,17 @@ class MainScene extends Phaser.Scene {
         }
     }
 
+    checkScoreAchievements() {
+        const milestones = [1000, 5000, 10000, 25000, 50000, 100000, 500000, 1000000];
+        for (let i = 0; i < milestones.length; i++) {
+            const ms = milestones[i];
+            if (this.score >= ms && !this.passedMilestones.has(ms)) {
+                this.passedMilestones.add(ms);
+                this.showBanner(T[getLang()].achievement + ": " + T[getLang()].score_milestone + ms);
+            }
+        }
+    }
+
     doMerge(r1, c1, r2, c2, tier, callback) {
         const sprite1 = this.grid[r1][c1].sprite;
         const sprite2 = this.grid[r2][c2].sprite;
@@ -1387,7 +1521,7 @@ class MainScene extends Phaser.Scene {
         });
     }
 
-    upgradeCell(r, c, tier) {
+    upgradeCell(r, c, tier, isLoad = false) {
         const cell = this.grid[r][c];
         if (cell.sprite) {
             this.tweens.killTweensOf(cell.sprite);
@@ -1397,7 +1531,10 @@ class MainScene extends Phaser.Scene {
         cell.tier = tier;
         if (tier > this.maxUnlockedTier) {
             this.maxUnlockedTier = tier;
-            this.showConfetti();
+            if (!isLoad) {
+                this.showConfetti();
+                this.showBanner(T[getLang()].achievement + ": " + T[getLang()].unlocked_tier + tier);
+            }
         }
 
         const x = this.gridOffsetX + c * this.cellSize;
@@ -1596,6 +1733,8 @@ class MainScene extends Phaser.Scene {
 
         this.updateBackgroundGradient();
         this.updateProgressIndicator();
+        this.checkScoreAchievements();
+        this.updateBuyButtons();
     }
 
     showPrestigeButton() {
