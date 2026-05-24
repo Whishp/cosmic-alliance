@@ -149,6 +149,8 @@
 </div>
 
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+
 // ========== GAME LOGIC ==========
 const BOARD_SIZE = 5;
 const TIERS = ['🌑','🌒','🌓','🌔','🌕','☀️','⭐','🌟','💫','✨','🔥','💎','👑','🪐','🌌','🌀'];
@@ -179,6 +181,7 @@ function saveGame() {
 function getTier() { return Math.floor(Math.random() * Math.min(3 + prestigeLevel, TIERS.length)); }
 
 function initBoard() {
+  board = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
   for (let r = 0; r < BOARD_SIZE; r++) {
     for (let c = 0; c < BOARD_SIZE; c++) {
       if (Math.random() < 0.7) board[r][c] = getTier();
@@ -186,21 +189,26 @@ function initBoard() {
   }
   renderBoard();
   updateHUD();
+  saveGame();
 }
 
 function renderBoard() {
   const el = document.getElementById('board');
+  if (!el) return;
   el.innerHTML = '';
   for (let r = 0; r < BOARD_SIZE; r++) {
     for (let c = 0; c < BOARD_SIZE; c++) {
       const cell = document.createElement('div');
       const tier = board[r][c];
-      cell.className = 'cell' + (tier === null ? ' empty' : '') + (selected && selected.r === r && selected.c === c ? ' selected' : '');
+      const isSelected = selected && selected.r === r && selected.c === c;
+      cell.className = 'cell' + (tier === null ? ' empty' : '') + (isSelected ? ' selected' : '');
       if (tier !== null) {
         cell.style.borderColor = COLORS[tier] + '40';
         cell.style.boxShadow = `0 0 15px ${COLORS[tier]}20, inset 0 0 20px ${COLORS[tier]}10`;
         cell.innerHTML = `${TIERS[tier]}<span class="tier-label">T${tier+1}</span>`;
       }
+      cell.dataset.r = r;
+      cell.dataset.c = c;
       cell.addEventListener('pointerdown', () => handleCell(r, c));
       el.appendChild(cell);
     }
@@ -269,14 +277,18 @@ function showFloat(r, c, text) {
   ft.textContent = text;
   ft.style.left = (rect.left + rect.width/2) + 'px';
   ft.style.top = rect.top + 'px';
+  ft.style.transform = 'translateX(-50%)';
   document.body.appendChild(ft);
   setTimeout(() => ft.remove(), 700);
 }
 
 function updateHUD() {
-  document.getElementById('score').textContent = format(score);
-  document.getElementById('merges').textContent = merges;
-  document.getElementById('highscore').textContent = format(highscore);
+  const scoreEl = document.getElementById('score');
+  const mergesEl = document.getElementById('merges');
+  const highEl = document.getElementById('highscore');
+  if (scoreEl) scoreEl.textContent = format(score);
+  if (mergesEl) mergesEl.textContent = merges;
+  if (highEl) highEl.textContent = format(highscore);
 }
 
 function format(n) {
@@ -289,20 +301,28 @@ function format(n) {
 
 // ========== UI ==========
 function showModal(title, text, btn) {
-  document.getElementById('modal-title').textContent = title;
-  document.getElementById('modal-text').innerHTML = text;
-  document.getElementById('modal-btn').textContent = btn;
-  document.getElementById('modal').classList.add('show');
+  const mo = document.getElementById('modal');
+  const mt = document.getElementById('modal-title');
+  const mc = document.getElementById('modal-text');
+  const mb = document.getElementById('modal-btn');
+  if (mt) mt.textContent = title;
+  if (mc) mc.innerHTML = text;
+  if (mb) mb.textContent = btn;
+  if (mo) mo.classList.add('show');
 }
 
-function hideModal() { document.getElementById('modal').classList.remove('show'); }
+function hideModal() { 
+  const mo = document.getElementById('modal');
+  if (mo) mo.classList.remove('show'); 
+}
 
-document.getElementById('modal-btn').addEventListener('click', hideModal);
+const modalBtn = document.getElementById('modal-btn');
+if (modalBtn) modalBtn.addEventListener('click', hideModal);
 
 // Tutorial on first play
 if (!localStorage.getItem('alliance_tutorial')) {
   localStorage.setItem('alliance_tutorial', '1');
-  showModal('КАК ИГРАТЬ', '1. Нажмите на фишку, чтобы выбрать<br>2. Нажмите на такую же фишку для слияния<br>3. Объединяйте для получения большего числа очков<br>4. Нажмите на пустую клетку для перемещения', 'ПОНЯТНО');
+  setTimeout(() => showModal('КАК ИГРАТЬ', '1. Нажмите на фишку, чтобы выбрать<br>2. Нажмите на такую же фишку для слияния<br>3. Объединяйте для получения большего числа очков<br>4. Нажмите на пустую клетку для перемещения', 'ПОНЯТНО'), 500);
 }
 
 // Multipliers
@@ -314,23 +334,25 @@ document.querySelectorAll('.mult-btn').forEach(btn => {
 });
 
 // Action buttons
-document.getElementById('btn-ad').addEventListener('click', () => {
+const btnAd = document.getElementById('btn-ad');
+if (btnAd) btnAd.addEventListener('click', () => {
   adMultiplier = 2;
   showModal('РЕКЛАМА', 'Следующее слияние даёт x2 очков!', 'КРУТО');
 });
 
-document.getElementById('btn-daily').addEventListener('click', () => {
+const btnDaily = document.getElementById('btn-daily');
+if (btnDaily) btnDaily.addEventListener('click', () => {
   showModal('ЕЖЕДНЕВНЫЙ ВЫЗОВ', 'Сделайте 10 слияний за 1 минуту!', 'ПОНЯТНО');
 });
 
-document.getElementById('btn-prestige').addEventListener('click', () => {
+const btnPrestige = document.getElementById('btn-prestige');
+if (btnPrestige) btnPrestige.addEventListener('click', () => {
   const req = 100 * Math.pow(10, prestigeLevel);
   if (score >= req) {
     if (confirm(`Сбросить прогресс ради x${prestigeLevel + 2} множителя?`)) {
       prestigeLevel++;
-      score = 0; merges = 0; board = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
+      score = 0; merges = 0;
       initBoard();
-      saveGame();
       showModal('ПРЕСТИЖ!', `Теперь доход x${(1 + prestigeLevel * 0.5).toFixed(1)}`, 'КРУТО');
     }
   } else {
@@ -340,22 +362,29 @@ document.getElementById('btn-prestige').addEventListener('click', () => {
 
 // Background orbits
 const bg = document.getElementById('bg-layer');
-for (let i = 0; i < 6; i++) {
-  const orb = document.createElement('div');
-  orb.className = 'orbit';
-  const size = 100 + Math.random() * 200;
-  orb.style.width = size + 'px';
-  orb.style.height = size + 'px';
-  orb.style.left = (Math.random() * 100) + '%';
-  orb.style.top = (Math.random() * 100) + '%';
-  orb.style.transform = 'translate(-50%, -50%)';
-  bg.appendChild(orb);
+if (bg) {
+  for (let i = 0; i < 6; i++) {
+    const orb = document.createElement('div');
+    orb.className = 'orbit';
+    const size = 100 + Math.random() * 200;
+    orb.style.width = size + 'px';
+    orb.style.height = size + 'px';
+    orb.style.left = (Math.random() * 100) + '%';
+    orb.style.top = (Math.random() * 100) + '%';
+    orb.style.transform = 'translate(-50%, -50%)';
+    bg.appendChild(orb);
+  }
 }
 
 // Init
 loadGame();
-if (board.flat().every(x => x === null)) initBoard();
-else { renderBoard(); updateHUD(); }
+if (board.flat().every(x => x === null)) {
+  initBoard();
+} else { 
+  renderBoard(); 
+  updateHUD(); 
+}
+
+}); // DOMContentLoaded
 </script>
-</body>
 </html>
