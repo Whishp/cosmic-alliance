@@ -2,6 +2,8 @@
 let ysdk = null;
 let player = null;
 let leaderboard = null;
+let payments = null;
+let noAdsPurchased = false;
 
 const FONT_FAMILY = '"Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif';
 
@@ -38,7 +40,8 @@ const T = {
         dailyReward: 'Награда',
         achievement: 'ДОСТИЖЕНИЕ',
         unlocked_tier: 'Открыт уровень: ',
-        score_milestone: 'Счет достигнут: '
+        score_milestone: 'Счет достигнут: ',
+        buy_no_ads: 'Отключить рекламу'
     },
     en: {
         title: 'COSMIC ALLIANCE',
@@ -62,7 +65,8 @@ const T = {
         dailyReward: 'Reward',
         achievement: 'ACHIEVEMENT',
         unlocked_tier: 'Unlocked Tier: ',
-        score_milestone: 'Score Milestone: '
+        score_milestone: 'Score Milestone: ',
+        buy_no_ads: 'Remove Ads'
     }
 };
 
@@ -168,8 +172,21 @@ class BootScene extends Phaser.Scene {
                     // silent fallback
                 }));
                 
-                Promise.all(promises).then(() => {
-                    this.scene.start('Main');
+                ysdk.getPayments({ signed: true }).then(_payments => {
+                    payments = _payments;
+                    return payments.getPurchases();
+                }).then(purchases => {
+                    if (purchases.some(purchase => purchase.productID === 'no_ads')) {
+                        noAdsPurchased = true;
+                    }
+                    Promise.all(promises).then(() => {
+                        this.scene.start('Main');
+                    });
+                }).catch(err => {
+                    // silent fallback
+                    Promise.all(promises).then(() => {
+                        this.scene.start('Main');
+                    });
                 });
             }).catch(err => {
                 // silent fallback
@@ -600,6 +617,19 @@ class MainScene extends Phaser.Scene {
             });
         }
 
+        // No Ads Button
+        if (payments && !noAdsPurchased) {
+            this.noAdsBtn = this.createStyledButton(width / 2, 270, T[getLang()].buy_no_ads, () => {
+                payments.purchase({ id: 'no_ads' }).then(purchase => {
+                    noAdsPurchased = true;
+                    this.noAdsBtn.setVisible(false);
+                    this.noAdsBtn.setAlpha(0);
+                }).catch(err => {
+                    // silent fallback
+                });
+            });
+        }
+
         // Mute button
         const savedMute = localStorage.getItem('cosmic_muted');
         if (savedMute !== null) {
@@ -676,7 +706,8 @@ class MainScene extends Phaser.Scene {
             const todayStr = new Date().toISOString().split('T')[0];
             const lastDaily = localStorage.getItem('lastDailyChallenge');
             if (lastDaily !== todayStr) {
-                this.dailyChallengeBtn = this.createStyledButton(width / 2, 270, T[getLang()].dailyChallenge, () => {
+                const btnY = (payments && !noAdsPurchased) ? 330 : 270;
+                this.dailyChallengeBtn = this.createStyledButton(width / 2, btnY, T[getLang()].dailyChallenge, () => {
                     this.scene.restart({ isDailyChallenge: true });
                 });
             }
@@ -1209,6 +1240,13 @@ class MainScene extends Phaser.Scene {
     }
 
     showRewardedAd() {
+        if (noAdsPurchased) {
+            this.doublePointsActive = true;
+            this.doublePointsTurns = 1;
+            this.rewardedBtn.setVisible(false);
+            return;
+        }
+
         if (!ysdk) return;
         ysdk.adv.showRewardedVideo({
             callbacks: {
@@ -1232,6 +1270,7 @@ class MainScene extends Phaser.Scene {
     }
 
     showInterstitialAd() {
+        if (noAdsPurchased) return;
         if (!ysdk) return;
         ysdk.adv.showFullscreenAdv({
             callbacks: {
@@ -1739,7 +1778,11 @@ class MainScene extends Phaser.Scene {
 
     showPrestigeButton() {
         const width = this.cameras.main.width;
-        this.prestigeBtnObj = this.createStyledButton(width / 2, 330, T[getLang()].prestige, () => {
+        let btnY = 330;
+        if (this.dailyChallengeBtn && this.dailyChallengeBtn.visible && this.noAdsBtn && this.noAdsBtn.visible) {
+            btnY += 60;
+        }
+        this.prestigeBtnObj = this.createStyledButton(width / 2, btnY, T[getLang()].prestige, () => {
             this.showPrestigeConfirm();
         });
     }
