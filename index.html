@@ -308,27 +308,59 @@ function initYandexSDK() {
 let audioCtx = null;
 let isMuted = false;
 
-const Sound = {
+class AudioController {
   initCtx() {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
-  },
-  tone(freq, type, dur, vol) {
+  }
+
+  tone(freq, type, dur, vol, startTimeOffset = 0) {
     if (isMuted) return;
     this.initCtx();
     if (!audioCtx) return;
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.type = type;
-    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-    gain.gain.setValueAtTime(vol, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + dur);
-    osc.connect(gain); gain.connect(audioCtx.destination);
-    osc.start(); osc.stop(audioCtx.currentTime + dur);
-  },
-  click() { this.tone(400, 'sine', 0.1, 0.05); },
-  merge(tier) { this.tone(300 + tier * 100, 'triangle', 0.2, 0.1); },
-  combo(c) { this.tone(400 + c * 150, 'square', 0.15, 0.05); },
+
+    const startTime = audioCtx.currentTime + startTimeOffset;
+    osc.frequency.setValueAtTime(freq, startTime);
+    gain.gain.setValueAtTime(vol, startTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, startTime + dur);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(startTime);
+    osc.stop(startTime + dur);
+  }
+
+  click() { this.tone(400, 'sine', 0.1, 0.05); }
+
+  merge(tier) {
+    const baseFreq = 300 + tier * 100;
+    this.tone(baseFreq, 'triangle', 0.1, 0.1);
+    this.tone(baseFreq * 1.5, 'triangle', 0.15, 0.1, 0.1);
+  }
+
+  combo(c) { this.tone(400 + c * 150, 'square', 0.15, 0.05); }
+
+  invalid() {
+    this.tone(150, 'sawtooth', 0.1, 0.1);
+    this.tone(100, 'sawtooth', 0.15, 0.1, 0.15);
+  }
+
+  victory() {
+    this.tone(440, 'square', 0.1, 0.1);
+    this.tone(554, 'square', 0.1, 0.1, 0.15);
+    this.tone(659, 'square', 0.2, 0.1, 0.3);
+  }
+
+  daily() {
+    this.tone(392, 'sine', 0.15, 0.1);
+    this.tone(523, 'sine', 0.15, 0.1, 0.2);
+    this.tone(659, 'sine', 0.15, 0.1, 0.4);
+    this.tone(784, 'sine', 0.3, 0.1, 0.6);
+  }
+
   gameOver() {
     if (isMuted) return;
     this.initCtx();
@@ -343,7 +375,9 @@ const Sound = {
     osc.connect(gain); gain.connect(audioCtx.destination);
     osc.start(); osc.stop(audioCtx.currentTime + 1.5);
   }
-};
+}
+
+const Sound = new AudioController();
 
 // ========== SEEDED RNG (for daily challenge) ==========
 class SeededRNG {
@@ -648,6 +682,7 @@ function doMerge(r1, c1, r2, c2, tier, callback) {
   // Track max tier
   if (nextTier > maxUnlockedTier) {
     maxUnlockedTier = nextTier;
+    Sound.victory();
     showConfetti();
     showBanner(t('achievement') + ': ' + t('unlocked_tier') + (nextTier + 1));
   }
@@ -966,6 +1001,7 @@ function startDailyChallenge() {
   renderBoard();
   updateHUD();
   showBanner(lang === 'en' ? 'Daily Challenge: Reach 2000!' : 'Ежедневный вызов: набери 2000!');
+  Sound.daily();
 }
 
 function showDailyComplete() {
@@ -974,6 +1010,7 @@ function showDailyComplete() {
   localStorage.setItem('cosmic_highscore', highscore.toString());
   localStorage.setItem('lastDailyChallenge', new Date().toISOString().split('T')[0]);
   saveCloudData();
+  Sound.victory();
   showConfetti();
   showModal(
     t('dailyChallenge'),
@@ -998,6 +1035,7 @@ function doPrestige() {
   localStorage.setItem('prestigeMultiplier', prestigeMultiplier.toString());
   localStorage.setItem('prestigeCount', prestigeLevel.toString());
   saveCloudData();
+  Sound.victory();
   showConfetti();
   showModal(
     t('prestige') + '!',
@@ -1015,6 +1053,7 @@ function getBuyCost(count, discount) {
 function buySpawn(count, discount) {
   const cost = getBuyCost(count, discount);
   if (score < cost) {
+    Sound.invalid();
     showModal(t('insufficient'), t('need') + format(cost) + ' ' + t('score').toLowerCase(), t('ok'));
     return;
   }
@@ -1156,6 +1195,7 @@ document.getElementById('btn-prestige').addEventListener('click', () => {
       }
     );
   } else {
+    Sound.invalid();
     showModal(t('insufficient'), t('need') + format(req) + ' ' + t('score').toLowerCase(), t('ok'));
   }
 });
