@@ -3,7 +3,7 @@ let ysdk = null;
 let player = null;
 let leaderboard = null;
 
-const FONT_FAMILY = '"Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif';
+const FONT_FAMILY = '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif';
 
 function formatNumber(num) {
     if (!isFinite(num) || isNaN(num)) return 'INF';
@@ -275,21 +275,28 @@ class BootScene extends Phaser.Scene {
         graphics.strokeCircle(50, 50, 45);
         graphics.generateTexture('tier_7', 100, 100);
         
-        // Cell Background (Dark glassy look)
+        // Cell Background (iOS glass-morphism style)
         graphics.clear();
-        graphics.fillStyle(0x1a1a2e, 0.6);
-        graphics.fillRoundedRect(0, 0, 100, 100, 16);
-        graphics.lineStyle(2, 0x2a2a4a, 0.8);
-        graphics.strokeRoundedRect(0, 0, 100, 100, 16);
+        graphics.fillStyle(0x1E1E3C, 0.6);
+        graphics.fillRoundedRect(0, 0, 100, 100, 20);
+        graphics.lineStyle(1, 0x00E5FF, 0.15);
+        graphics.strokeRoundedRect(0, 0, 100, 100, 20);
+        // Faint dot in center for empty cells
+        graphics.fillStyle(0x00E5FF, 0.15);
+        graphics.fillCircle(50, 50, 3);
         graphics.generateTexture('cell_bg', 100, 100);
         
-        // Selected Highlight (Neon cyan)
+        // Selected Highlight (iOS-style inner glow + cyan border)
         graphics.clear();
-        graphics.lineStyle(4, 0x00e5ff, 1);
-        graphics.strokeRoundedRect(0, 0, 100, 100, 16);
+        // Inner glow
+        graphics.fillStyle(0x00E5FF, 0.08);
+        graphics.fillRoundedRect(2, 2, 96, 96, 20);
+        // Border
+        graphics.lineStyle(3, 0x00E5FF, 1);
+        graphics.strokeRoundedRect(0, 0, 100, 100, 20);
         // Glow effect
-        graphics.lineStyle(8, 0x00e5ff, 0.3);
-        graphics.strokeRoundedRect(0, 0, 100, 100, 16);
+        graphics.lineStyle(8, 0x00E5FF, 0.25);
+        graphics.strokeRoundedRect(0, 0, 100, 100, 20);
         graphics.generateTexture('cell_selected', 100, 100);
         
         // Particle (Star shape or circle with glow)
@@ -300,51 +307,97 @@ class BootScene extends Phaser.Scene {
         graphics.fillCircle(8, 8, 8);
         graphics.generateTexture('particle', 16, 16);
 
-        // Button Texture (Rounded gradient background)
+        // Button Texture (iOS-style gradient — cyan for ad button)
         const canvas = document.createElement('canvas');
-        canvas.width = 420; // Wider to accommodate glow and RU text
+        canvas.width = 420;
         canvas.height = 100;
         const ctx = canvas.getContext('2d');
 
-        // Outer glow
-        ctx.shadowColor = '#00e5ff';
-        ctx.shadowBlur = 15;
+        // Shadow glow
+        ctx.shadowColor = 'rgba(0, 229, 255, 0.3)';
+        ctx.shadowBlur = 16;
         ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
+        ctx.shadowOffsetY = 4;
 
-        const gradient = ctx.createLinearGradient(10, 10, 410, 10);
-        gradient.addColorStop(0, '#1a0a2a');
-        gradient.addColorStop(0.5, '#2a1a5a');
-        gradient.addColorStop(1, '#1a0a2a');
+        // iOS gradient: 135deg #00E5FF → #0088CC
+        const gradient = ctx.createLinearGradient(10, 10, 410, 90);
+        gradient.addColorStop(0, '#00E5FF');
+        gradient.addColorStop(1, '#0088CC');
 
         ctx.fillStyle = gradient;
         ctx.beginPath();
-
-        // Render rect with padding for shadow
         if (ctx.roundRect) {
-            ctx.roundRect(10, 10, 400, 80, 40);
+            ctx.roundRect(10, 10, 400, 80, 14);
         } else {
             ctx.rect(10, 10, 400, 80);
         }
         ctx.fill();
 
-        ctx.shadowBlur = 0; // Remove shadow for stroke
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = '#00e5ff';
-        ctx.stroke();
-
-        // Inner highlight (subtle)
+        ctx.shadowBlur = 0;
+        // Subtle white inner highlight
         ctx.beginPath();
         if (ctx.roundRect) {
-            ctx.roundRect(12, 12, 396, 76, 38);
+            ctx.roundRect(12, 12, 396, 38, 14);
         } else {
-            ctx.rect(12, 12, 396, 76);
+            ctx.rect(12, 12, 396, 38);
         }
         ctx.lineWidth = 1;
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
         ctx.stroke();
 
         this.textures.addCanvas('button_bg', canvas);
+
+        // Prestige button texture (iOS gradient — red/orange)
+        const canvas2 = document.createElement('canvas');
+        canvas2.width = 420;
+        canvas2.height = 100;
+        const ctx2 = canvas2.getContext('2d');
+
+        ctx2.shadowColor = 'rgba(255, 55, 95, 0.3)';
+        ctx2.shadowBlur = 16;
+        ctx2.shadowOffsetY = 4;
+
+        const gradient2 = ctx2.createLinearGradient(10, 10, 410, 90);
+        gradient2.addColorStop(0, '#FF375F');
+        gradient2.addColorStop(1, '#FF9F0A');
+
+        ctx2.fillStyle = gradient2;
+        ctx2.beginPath();
+        if (ctx2.roundRect) {
+            ctx2.roundRect(10, 10, 400, 80, 14);
+        } else {
+            ctx2.rect(10, 10, 400, 80);
+        }
+        ctx2.fill();
+        ctx2.shadowBlur = 0;
+
+        this.textures.addCanvas('button_bg_prestige', canvas2);
+
+        // Daily button texture (iOS gradient — purple)
+        const canvas3 = document.createElement('canvas');
+        canvas3.width = 420;
+        canvas3.height = 100;
+        const ctx3 = canvas3.getContext('2d');
+
+        ctx3.shadowColor = 'rgba(191, 90, 242, 0.3)';
+        ctx3.shadowBlur = 16;
+        ctx3.shadowOffsetY = 4;
+
+        const gradient3 = ctx3.createLinearGradient(10, 10, 410, 90);
+        gradient3.addColorStop(0, '#BF5AF2');
+        gradient3.addColorStop(1, '#7B2CBF');
+
+        ctx3.fillStyle = gradient3;
+        ctx3.beginPath();
+        if (ctx3.roundRect) {
+            ctx3.roundRect(10, 10, 400, 80, 14);
+        } else {
+            ctx3.rect(10, 10, 400, 80);
+        }
+        ctx3.fill();
+        ctx3.shadowBlur = 0;
+
+        this.textures.addCanvas('button_bg_daily', canvas3);
 
         graphics.destroy();
     }
@@ -471,30 +524,71 @@ class MainScene extends Phaser.Scene {
             this.starLayers.push({ container: container, speed: layerSpeeds[j] });
         }
 
+        // Parallax Orbits (iOS-style faint circle outlines rotating slowly)
+        this.orbitCircles = [];
+        const orbitConfigs = [
+            { radius: 120, x: width * 0.2, y: height * 0.3, speed: 0.003 },
+            { radius: 200, x: width * 0.75, y: height * 0.5, speed: -0.005 },
+            { radius: 160, x: width * 0.5, y: height * 0.7, speed: 0.004 },
+            { radius: 90, x: width * 0.1, y: height * 0.8, speed: -0.002 }
+        ];
+        for (const cfg of orbitConfigs) {
+            const g = this.add.graphics();
+            g.lineStyle(1, 0x00E5FF, 0.08);
+            g.strokeCircle(cfg.x, cfg.y, cfg.radius);
+            g.setDepth(0);
+            this.orbitCircles.push({ graphics: g, cfg: cfg, angle: Math.random() * Math.PI * 2 });
+        }
+
         this.updateBackgroundGradient();
 
-        // Top UI
+        // Top UI — iOS Status Bar
         const l = getLang();
-        this.add.text(width/2, 50, T[l].title, { fontSize: '40px', fill: '#fff', fontFamily: FONT_FAMILY, fontStyle: 'bold' }).setOrigin(0.5);
+        // Glass status bar at top
+        const statusBarGfx = this.add.graphics();
+        statusBarGfx.fillStyle(0x050510, 0.4);
+        statusBarGfx.fillRoundedRect(0, 0, width, 44, 0);
+        statusBarGfx.lineStyle(0.5, 0xFFFFFF, 0.06);
+        statusBarGfx.lineBetween(0, 44, width, 44);
+        // Title in status bar with letter-spacing
+        const titleText = T[l].title.split('').join(' ');
+        this.add.text(width/2, 22, titleText, { fontSize: '15px', fill: '#FFFFFF', fontFamily: FONT_FAMILY, fontStyle: 'bold' }).setOrigin(0.5);
 
-        // Score Cards Graphics
+        // Score Cards — iOS HUD Pills
         const cardY = 110;
-        const cardWidth = width <= 600 ? Math.floor(width * 0.35) : 220;
+        const pillW = width <= 600 ? Math.floor(width * 0.30) : 200;
+        const pillH = 36;
+        const pillGap = width <= 600 ? 8 : 16;
+        const totalPillW = pillW * 3 + pillGap * 2;
+        const pillStartX = (width - totalPillW) / 2;
 
         const cardBg = this.add.graphics();
-        cardBg.fillStyle(0x000000, 0.4);
-        cardBg.fillRoundedRect(10, cardY, cardWidth, 40, 10); // Score card
-        cardBg.fillRoundedRect(width - cardWidth - 10, cardY, cardWidth, 40, 10); // Highscore card
-        
-        cardBg.lineStyle(1, 0x00e5ff, 0.3);
-        cardBg.strokeRoundedRect(10, cardY, cardWidth, 40, 10);
-        cardBg.strokeRoundedRect(width - cardWidth - 10, cardY, cardWidth, 40, 10);
+        // Pill 1: Score (gold)
+        cardBg.fillStyle(0x787880, 0.10);
+        cardBg.fillRoundedRect(pillStartX, cardY, pillW, pillH, 20);
+        cardBg.lineStyle(0.5, 0xFFFFFF, 0.06);
+        cardBg.strokeRoundedRect(pillStartX, cardY, pillW, pillH, 20);
+        // Pill 2: Merges (cyan)
+        const pill2X = pillStartX + pillW + pillGap;
+        cardBg.fillStyle(0x787880, 0.10);
+        cardBg.fillRoundedRect(pill2X, cardY, pillW, pillH, 20);
+        cardBg.lineStyle(0.5, 0xFFFFFF, 0.06);
+        cardBg.strokeRoundedRect(pill2X, cardY, pillW, pillH, 20);
+        // Pill 3: High Score (muted)
+        const pill3X = pillStartX + (pillW + pillGap) * 2;
+        cardBg.fillStyle(0x787880, 0.10);
+        cardBg.fillRoundedRect(pill3X, cardY, pillW, pillH, 20);
+        cardBg.lineStyle(0.5, 0xFFFFFF, 0.06);
+        cardBg.strokeRoundedRect(pill3X, cardY, pillW, pillH, 20);
 
         this.fontSize = fontSize; // Store for later text creations
         this.cardY = cardY;
+        this.pillStartX = pillStartX;
+        this.pillW = pillW;
+        this.pillGap = pillGap;
 
-        this.scoreText = this.add.text(20, cardY + 5, T[l].score + formatNumber(0), { fontFamily: FONT_FAMILY, fontSize: fontSize, fill: '#ffd700' });
-        this.setShadow(this.scoreText, '#ffd700', 10);
+        this.scoreText = this.add.text(pillStartX + 10, cardY + 9, T[l].score + formatNumber(0), { fontFamily: FONT_FAMILY, fontSize: '13px', fill: '#FFD60A', fontStyle: 'bold' });
+        this.setShadow(this.scoreText, '#FFD60A', 6);
         
         // Progress Indicator UI
         this.maxUnlockedTier = 3; // Starts assuming they have tier 3 from spawn
@@ -512,11 +606,11 @@ class MainScene extends Phaser.Scene {
         const savedPrestigeCount = localStorage.getItem('prestigeCount');
         if (savedPrestigeCount) this.prestigeCount = parseInt(savedPrestigeCount, 10);
 
-        this.highScoreText = this.add.text(width - 20, cardY + 5, T[l].highscore + formatNumber(this.highScore), { fontFamily: FONT_FAMILY, fontSize: fontSize, fill: '#aaa' }).setOrigin(1, 0);
-        this.setShadow(this.highScoreText, '#aaa', 10);
+        this.highScoreText = this.add.text(pill3X + 10, cardY + 9, T[l].highscore + formatNumber(this.highScore), { fontFamily: FONT_FAMILY, fontSize: '13px', fill: '#EBEBF5', fontStyle: 'bold' }).setOrigin(0, 0);
+        this.setShadow(this.highScoreText, '#aaa', 6);
 
-        this.mergeCountText = this.add.text(width / 2, cardY + 20, T[l].merges + this.mergeCount, { fontFamily: FONT_FAMILY, fontSize: fontSize, fill: '#00e5ff' }).setOrigin(0.5);
-        this.setShadow(this.mergeCountText, '#00e5ff', 10);
+        this.mergeCountText = this.add.text(pill2X + 10, cardY + 9, T[l].merges + this.mergeCount, { fontFamily: FONT_FAMILY, fontSize: '13px', fill: '#00E5FF', fontStyle: 'bold' }).setOrigin(0, 0);
+        this.setShadow(this.mergeCountText, '#00E5FF', 6);
 
         if (this.prestigeMultiplier > 1.0) {
             this.prestigeText = this.add.text(20, cardY + 45, T[l].prestigeMultiplier + ': ' + this.prestigeMultiplier + 'x', { fontFamily: FONT_FAMILY, fontSize: fontSize, fill: '#ff8800' });
@@ -631,10 +725,10 @@ class MainScene extends Phaser.Scene {
             this.tweens.killTweensOf(this.rewardedBtnContainer);
             this.tweens.add({
                 targets: this.rewardedBtnContainer,
-                scaleX: 0.85,
-                scaleY: 0.85,
+                scaleX: 0.95,
+                scaleY: 0.95,
                 duration: 100,
-                ease: 'Back.easeIn',
+                ease: 'Sine.easeIn',
                 yoyo: true,
                 onComplete: () => {
                     this.showRewardedAd();
@@ -757,18 +851,25 @@ class MainScene extends Phaser.Scene {
 
         this.gridOffsetX = (width - (this.gridSize * this.cellSize)) / 2 + (this.cellSize / 2);
 
-        // Update score/high score texts positions
+        // Update score/high score texts positions (iOS pills)
+        const pillGap = this.pillGap || 16;
+        const pillW = this.pillW || 200;
+        const totalPillW2 = pillW * 3 + pillGap * 2;
+        const pillStartX = (width - totalPillW2) / 2;
+        const pill2X = pillStartX + pillW + pillGap;
+        const pill3X = pillStartX + (pillW + pillGap) * 2;
+
         if (this.scoreText) {
-            this.scoreText.setPosition(20, this.cardY + 5);
-            this.scoreText.setFontSize(parseInt(fontSize));
+            this.scoreText.setPosition(pillStartX + 10, this.cardY + 9);
+            this.scoreText.setFontSize(13);
         }
         if (this.highScoreText) {
-            this.highScoreText.setPosition(width - 20, this.cardY + 5);
-            this.highScoreText.setFontSize(parseInt(fontSize));
+            this.highScoreText.setPosition(pill3X + 10, this.cardY + 9);
+            this.highScoreText.setFontSize(13);
         }
         if (this.mergeCountText) {
-            this.mergeCountText.setPosition(width / 2, this.cardY + 20);
-            this.mergeCountText.setFontSize(parseInt(fontSize));
+            this.mergeCountText.setPosition(pill2X + 10, this.cardY + 9);
+            this.mergeCountText.setFontSize(13);
         }
         if (this.prestigeText) {
             this.prestigeText.setPosition(20, this.cardY + 45);
@@ -814,18 +915,22 @@ class MainScene extends Phaser.Scene {
         const height = this.cameras.main.height;
         const l = getLang();
 
-        const overlay = this.add.rectangle(width/2, height/2, width, height, 0x000000, 0.85);
+        const overlay = this.add.rectangle(width/2, height/2, width, height, 0x050510, 0.85);
         overlay.setInteractive(); // block background clicks
 
         const popup = this.add.container(width/2, height/2);
 
         const cardBg = this.add.graphics();
-        cardBg.fillStyle(0x1a1a3a, 1);
-        cardBg.fillRoundedRect(-200, -180, 400, 360, 20);
-        cardBg.lineStyle(3, 0x00e5ff, 1);
-        cardBg.strokeRoundedRect(-200, -180, 400, 360, 20);
+        // Outer glow
+        cardBg.fillStyle(0x00E5FF, 0.15);
+        cardBg.fillRoundedRect(-206, -186, 412, 372, 28);
+        // Card body
+        cardBg.fillStyle(0x16162E, 0.85);
+        cardBg.fillRoundedRect(-200, -180, 400, 360, 24);
+        cardBg.lineStyle(1, 0x00E5FF, 0.2);
+        cardBg.strokeRoundedRect(-200, -180, 400, 360, 24);
 
-        const titleText = this.add.text(0, -140, T[l].tutorial_title, { fontFamily: FONT_FAMILY, fontSize: '28px', fill: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        const titleText = this.add.text(0, -140, T[l].tutorial_title, { fontFamily: FONT_FAMILY, fontSize: '20px', fill: '#00E5FF', fontStyle: '800' }).setOrigin(0.5);
         this.setShadow(titleText, '#00e5ff', 5);
 
         const stepStyle = { fontFamily: FONT_FAMILY, fontSize: '18px', fill: '#ddd', wordWrap: { width: 360, useAdvancedWrap: true } };
@@ -885,20 +990,24 @@ class MainScene extends Phaser.Scene {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
 
-        const overlay = this.add.rectangle(width/2, height/2, width, height, 0x000000, 0.7);
+        const overlay = this.add.rectangle(width/2, height/2, width, height, 0x050510, 0.7);
         overlay.setInteractive(); // Block clicks
 
         const popup = this.add.container(width/2, height/2);
 
         const cardBg = this.add.graphics();
-        cardBg.fillStyle(0x1a1a3a, 1);
-        cardBg.fillRoundedRect(-150, -100, 300, 200, 20);
-        cardBg.lineStyle(3, 0x00e5ff, 1);
-        cardBg.strokeRoundedRect(-150, -100, 300, 200, 20);
+        // Outer glow
+        cardBg.fillStyle(0x00E5FF, 0.12);
+        cardBg.fillRoundedRect(-156, -106, 312, 212, 28);
+        // Card body
+        cardBg.fillStyle(0x16162E, 0.85);
+        cardBg.fillRoundedRect(-150, -100, 300, 200, 24);
+        cardBg.lineStyle(1, 0x00E5FF, 0.2);
+        cardBg.strokeRoundedRect(-150, -100, 300, 200, 24);
 
         const l = getLang();
-        const titleText = this.add.text(0, -60, l === 'ru' ? 'ОФФЛАЙН ДОХОД' : 'OFFLINE INCOME', { fontFamily: FONT_FAMILY, fontSize: '24px', fill: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
-        const amountText = this.add.text(0, -10, '+' + formatNumber(amount), { fontFamily: FONT_FAMILY, fontSize: '36px', fill: '#ffd700' }).setOrigin(0.5);
+        const titleText = this.add.text(0, -60, l === 'ru' ? 'ОФФЛАЙН  Д О Х О Д' : 'O F F L I N E   I N C O M E', { fontFamily: FONT_FAMILY, fontSize: '20px', fill: '#00E5FF', fontStyle: '800' }).setOrigin(0.5);
+        const amountText = this.add.text(0, -10, '+' + formatNumber(amount), { fontFamily: FONT_FAMILY, fontSize: '36px', fill: '#FFD60A' }).setOrigin(0.5);
         this.setShadow(amountText, '#000', 2);
 
         const claimBtnBg = this.add.image(0, 50, 'button_bg').setOrigin(0.5).setScale(0.6, 0.5);
@@ -935,11 +1044,22 @@ class MainScene extends Phaser.Scene {
 
     update() {
         const height = this.cameras.main.height;
+        const width = this.cameras.main.width;
         // Scroll star layers
         for (const layer of this.starLayers) {
             layer.container.y += layer.speed;
             if (layer.container.y > height) {
                 layer.container.y -= height;
+            }
+        }
+
+        // Rotate parallax orbits
+        if (this.orbitCircles) {
+            for (const orb of this.orbitCircles) {
+                orb.angle += orb.cfg.speed;
+                orb.graphics.clear();
+                orb.graphics.lineStyle(1, 0x00E5FF, 0.08);
+                orb.graphics.strokeCircle(orb.cfg.x, orb.cfg.y, orb.cfg.radius);
             }
         }
 
@@ -1006,14 +1126,14 @@ class MainScene extends Phaser.Scene {
     drawBuyBtnBg(bg, hover) {
         bg.clear();
         if (hover) {
-            bg.fillGradientStyle(0x2a2a5a, 0x2a2a5a, 0x1a1a3a, 0x1a1a3a, 1);
-            bg.lineStyle(2, 0xff00ff, 1);
+            bg.fillStyle(0x2A2A5A, 0.8);
+            bg.lineStyle(1, 0x00E5FF, 0.6);
         } else {
-            bg.fillGradientStyle(0x1a1a3a, 0x1a1a3a, 0x0a0a2a, 0x0a0a2a, 1);
-            bg.lineStyle(2, 0x00e5ff, 0.8);
+            bg.fillStyle(0x16162E, 0.7);
+            bg.lineStyle(1, 0x00E5FF, 0.15);
         }
-        bg.fillRoundedRect(-50, -25, 100, 50, 10);
-        bg.strokeRoundedRect(-50, -25, 100, 50, 10);
+        bg.fillRoundedRect(-50, -25, 100, 50, 14);
+        bg.strokeRoundedRect(-50, -25, 100, 50, 14);
     }
 
     updateBuyButtons() {
@@ -1050,10 +1170,10 @@ class MainScene extends Phaser.Scene {
         const bgHeight = textHeight + paddingY * 2;
 
         const bg = this.add.graphics();
-        bg.fillGradientStyle(0x1a1a3a, 0x1a1a3a, 0x0a0a2a, 0x0a0a2a, 1);
-        bg.fillRoundedRect(-bgWidth/2, -bgHeight/2, bgWidth, bgHeight, 10);
-        bg.lineStyle(2, 0x00e5ff, 0.8);
-        bg.strokeRoundedRect(-bgWidth/2, -bgHeight/2, bgWidth, bgHeight, 10);
+        bg.fillStyle(0x16162E, 0.85);
+        bg.fillRoundedRect(-bgWidth/2, -bgHeight/2, bgWidth, bgHeight, 14);
+        bg.lineStyle(1, 0x00E5FF, 0.2);
+        bg.strokeRoundedRect(-bgWidth/2, -bgHeight/2, bgWidth, bgHeight, 14);
 
         // Interactive hit area
         const hitArea = this.add.zone(0, 0, bgWidth, bgHeight).setInteractive({ useHandCursor: true });
@@ -1064,10 +1184,10 @@ class MainScene extends Phaser.Scene {
             this.tweens.killTweensOf(container);
             this.tweens.add({
                 targets: container,
-                scaleX: 0.85,
-                scaleY: 0.85,
+                scaleX: 0.95,
+                scaleY: 0.95,
                 duration: 100,
-                ease: 'Back.easeIn',
+                ease: 'Sine.easeIn',
                 yoyo: true,
                 onComplete: onClick
             });
@@ -1082,10 +1202,10 @@ class MainScene extends Phaser.Scene {
                 ease: 'Sine.easeOut'
             });
             bg.clear();
-            bg.fillGradientStyle(0x2a2a5a, 0x2a2a5a, 0x1a1a3a, 0x1a1a3a, 1);
-            bg.fillRoundedRect(-bgWidth/2, -bgHeight/2, bgWidth, bgHeight, 10);
-            bg.lineStyle(2, 0xff00ff, 1);
-            bg.strokeRoundedRect(-bgWidth/2, -bgHeight/2, bgWidth, bgHeight, 10);
+            bg.fillStyle(0x2A2A5A, 0.85);
+            bg.fillRoundedRect(-bgWidth/2, -bgHeight/2, bgWidth, bgHeight, 14);
+            bg.lineStyle(1, 0x00E5FF, 0.4);
+            bg.strokeRoundedRect(-bgWidth/2, -bgHeight/2, bgWidth, bgHeight, 14);
         });
 
         hitArea.on('pointerout', () => {
@@ -1097,10 +1217,10 @@ class MainScene extends Phaser.Scene {
                 ease: 'Sine.easeOut'
             });
             bg.clear();
-            bg.fillGradientStyle(0x1a1a3a, 0x1a1a3a, 0x0a0a2a, 0x0a0a2a, 1);
-            bg.fillRoundedRect(-bgWidth/2, -bgHeight/2, bgWidth, bgHeight, 10);
-            bg.lineStyle(2, 0x00e5ff, 0.8);
-            bg.strokeRoundedRect(-bgWidth/2, -bgHeight/2, bgWidth, bgHeight, 10);
+            bg.fillStyle(0x16162E, 0.85);
+            bg.fillRoundedRect(-bgWidth/2, -bgHeight/2, bgWidth, bgHeight, 14);
+            bg.lineStyle(1, 0x00E5FF, 0.2);
+            bg.strokeRoundedRect(-bgWidth/2, -bgHeight/2, bgWidth, bgHeight, 14);
         });
 
         return container;
@@ -1116,10 +1236,10 @@ class MainScene extends Phaser.Scene {
         const bgHeight = 60;
 
         const bg = this.add.graphics();
-        bg.fillGradientStyle(0x3a1a5a, 0x3a1a5a, 0x1a0a2a, 0x1a0a2a, 1);
-        bg.fillRoundedRect(-bgWidth/2, -bgHeight/2, bgWidth, bgHeight, 15);
-        bg.lineStyle(2, 0xff00ff, 1);
-        bg.strokeRoundedRect(-bgWidth/2, -bgHeight/2, bgWidth, bgHeight, 15);
+        bg.fillStyle(0x16162E, 0.85);
+        bg.fillRoundedRect(-bgWidth/2, -bgHeight/2, bgWidth, bgHeight, 20);
+        bg.lineStyle(1, 0xBF5AF2, 0.3);
+        bg.strokeRoundedRect(-bgWidth/2, -bgHeight/2, bgWidth, bgHeight, 20);
 
         const text = this.add.text(0, 0, message, {
             fontFamily: FONT_FAMILY,
@@ -1155,55 +1275,38 @@ class MainScene extends Phaser.Scene {
     drawBackground() {
         if (!this.bgRect) return;
         this.bgRect.clear();
-        // vertical gradient dark space to lighter bottom
-        this.bgRect.fillGradientStyle(0x0a0a1a, 0x0a0a1a, 0x1a0a2a, 0x1a0a2a, 1);
+        // iOS deep space black
+        this.bgRect.fillStyle(0x050510, 1);
         this.bgRect.fillRect(0, 0, this.cameras.main.width, this.cameras.main.height);
     }
 
     drawProgressBar(width, progressRatio) {
         const barWidth = width - 40;
-        const barHeight = 10;
+        const barHeight = 6;
         const x = 20;
-        const y = 175;
+        const y = 160;
 
         this.progressBg.clear();
-        this.progressBg.fillStyle(0x1a1a3a, 1);
-        this.progressBg.fillRoundedRect(x, y, barWidth, barHeight, 5);
-        this.progressBg.lineStyle(2, 0x4a4a8a, 1);
-        this.progressBg.strokeRoundedRect(x, y, barWidth, barHeight, 5);
+        this.progressBg.fillStyle(0x16162E, 0.6);
+        this.progressBg.fillRoundedRect(x, y, barWidth, barHeight, 3);
+        this.progressBg.lineStyle(0.5, 0xFFFFFF, 0.06);
+        this.progressBg.strokeRoundedRect(x, y, barWidth, barHeight, 3);
 
         this.progressBar.clear();
         if (progressRatio > 0) {
-            this.progressBar.fillStyle(0x00e5ff, 1);
-            this.progressBar.fillRoundedRect(x, y, barWidth * progressRatio, barHeight, 5);
+            this.progressBar.fillStyle(0x00E5FF, 1);
+            this.progressBar.fillRoundedRect(x, y, barWidth * progressRatio, barHeight, 3);
             // glow effect
-            this.progressBar.lineStyle(4, 0x00e5ff, 0.4);
-            this.progressBar.strokeRoundedRect(x, y, barWidth * progressRatio, barHeight, 5);
+            this.progressBar.lineStyle(3, 0x00E5FF, 0.3);
+            this.progressBar.strokeRoundedRect(x, y, barWidth * progressRatio, barHeight, 3);
         }
     }
 
     updateBackgroundGradient() {
-        // Shift Phaser background gradient based on score progress
-        const maxScoreBase = 10000;
-        const progress = Math.min(this.score / maxScoreBase, 1);
-
-        // Base: #0a0a1a to #1a0a2a
-        // Advanced: #0a1a2a to #2a0a4a
-
-        const r1 = Math.floor(10 + progress * 0); // 0a -> 0a
-        const g1 = Math.floor(10 + progress * 16); // 0a -> 1a
-        const b1 = Math.floor(26 + progress * 16); // 1a -> 2a
-
-        const r2 = Math.floor(26 + progress * 16); // 1a -> 2a
-        const g2 = Math.floor(10 + progress * -10); // 0a -> 00 (approx)
-        const b2 = Math.floor(42 + progress * 32); // 2a -> 4a
-
-        const hexColor1 = (r1 << 16) + (g1 << 8) + b1;
-        const hexColor2 = (r2 << 16) + (g2 << 8) + b2;
-
+        // iOS style — deep space black stays constant, no gradient shift
         if (this.bgRect) {
             this.bgRect.clear();
-            this.bgRect.fillGradientStyle(hexColor1, hexColor2, hexColor1, hexColor2, 1);
+            this.bgRect.fillStyle(0x050510, 1);
             this.bgRect.fillRect(0, 0, this.cameras.main.width, this.cameras.main.height);
         }
     }
@@ -1750,16 +1853,20 @@ class MainScene extends Phaser.Scene {
         const height = this.cameras.main.height;
         const l = getLang();
 
-        const overlay = this.add.rectangle(width/2, height/2, width, height, 0x000000, 0.85);
+        const overlay = this.add.rectangle(width/2, height/2, width, height, 0x050510, 0.85);
         overlay.setInteractive();
 
         const popup = this.add.container(width/2, height/2);
 
         const cardBg = this.add.graphics();
-        cardBg.fillStyle(0x1a1a3a, 1);
-        cardBg.fillRoundedRect(-200, -120, 400, 240, 20);
-        cardBg.lineStyle(3, 0xff8800, 1);
-        cardBg.strokeRoundedRect(-200, -120, 400, 240, 20);
+        // Outer glow
+        cardBg.fillStyle(0xFF375F, 0.1);
+        cardBg.fillRoundedRect(-206, -126, 412, 252, 28);
+        // Card body
+        cardBg.fillStyle(0x16162E, 0.85);
+        cardBg.fillRoundedRect(-200, -120, 400, 240, 24);
+        cardBg.lineStyle(1, 0xFF375F, 0.2);
+        cardBg.strokeRoundedRect(-200, -120, 400, 240, 24);
 
         const titleText = this.add.text(0, -70, T[l].prestige, { fontFamily: FONT_FAMILY, fontSize: '28px', fill: '#ff8800', fontStyle: 'bold' }).setOrigin(0.5);
         this.setShadow(titleText, '#ff8800', 5);
@@ -1875,16 +1982,20 @@ class MainScene extends Phaser.Scene {
             player.setData({ highScore: newHighScore }).catch(() => {});
         }
 
-        const overlay = this.add.rectangle(width/2, height/2, width, height, 0x000000, 0.85);
+        const overlay = this.add.rectangle(width/2, height/2, width, height, 0x050510, 0.85);
         overlay.setInteractive();
 
         const popup = this.add.container(width/2, height/2);
 
         const cardBg = this.add.graphics();
-        cardBg.fillStyle(0x1a1a3a, 1);
-        cardBg.fillRoundedRect(-180, -120, 360, 240, 20);
-        cardBg.lineStyle(3, 0x00ff00, 1);
-        cardBg.strokeRoundedRect(-180, -120, 360, 240, 20);
+        // Outer glow
+        cardBg.fillStyle(0x00ff00, 0.08);
+        cardBg.fillRoundedRect(-186, -126, 372, 252, 28);
+        // Card body
+        cardBg.fillStyle(0x16162E, 0.85);
+        cardBg.fillRoundedRect(-180, -120, 360, 240, 24);
+        cardBg.lineStyle(1, 0x00ff00, 0.2);
+        cardBg.strokeRoundedRect(-180, -120, 360, 240, 24);
 
         const titleText = this.add.text(0, -70, T[l].dailyChallenge, { fontFamily: FONT_FAMILY, fontSize: '28px', fill: '#00ff00', fontStyle: 'bold' }).setOrigin(0.5);
         this.setShadow(titleText, '#00ff00', 5);
@@ -1955,7 +2066,7 @@ class MainScene extends Phaser.Scene {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
         
-        const overlay = this.add.rectangle(width/2, height/2, width, height, 0x000000, 0.8);
+        const overlay = this.add.rectangle(width/2, height/2, width, height, 0x050510, 0.85);
         const l = getLang();
         const goText = this.add.text(width/2, height/2 - 100, T[l].game_over, {
             fontFamily: FONT_FAMILY, fontSize: '48px',
@@ -2018,10 +2129,10 @@ class MainScene extends Phaser.Scene {
             this.tweens.killTweensOf(restartBtnContainer);
             this.tweens.add({
                 targets: restartBtnContainer,
-                scaleX: 0.85,
-                scaleY: 0.85,
+                scaleX: 0.95,
+                scaleY: 0.95,
                 duration: 100,
-                ease: 'Back.easeIn',
+                ease: 'Sine.easeIn',
                 yoyo: true,
                 onComplete: () => {
                     this.scene.restart();
