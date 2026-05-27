@@ -74,6 +74,7 @@
   .action-btn { flex: 1; min-width: 90px; height: 44px; border-radius: 12px; border: none; color: white; font-family: inherit; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: transform 0.1s; }
   .action-btn:active { transform: scale(0.95); }
   #btn-ad { background: linear-gradient(135deg, var(--accent), #0088cc); box-shadow: 0 4px 16px rgba(0, 229, 255, 0.2); }
+  #btn-remove-ads { background: linear-gradient(135deg, #30D158, #248A3D); box-shadow: 0 4px 16px rgba(48, 209, 88, 0.2); }
   #btn-daily { background: linear-gradient(135deg, var(--accent2), #7B2CBF); box-shadow: 0 4px 16px rgba(191, 90, 242, 0.2); }
   #btn-prestige { background: linear-gradient(135deg, #FF375F, #FF9F0A); box-shadow: 0 4px 16px rgba(255, 55, 95, 0.2); }
   #btn-mute { flex: 0; min-width: 44px; background: rgba(120,120,128,0.12); border: 1px solid rgba(255,255,255,0.08); font-size: 18px; }
@@ -176,6 +177,7 @@
       <button class="action-btn" id="btn-ad">📺 <span data-i18n="watch_ad">Реклама 2x</span></button>
       <button class="action-btn" id="btn-daily">🎁 <span data-i18n="dailyChallenge">Ежедневный</span></button>
       <button class="action-btn" id="btn-prestige">✦ <span data-i18n="prestige">Престиж</span></button>
+      <button class="action-btn" id="btn-remove-ads">🚫 <span data-i18n="remove_ads">Без рекламы</span></button>
       <button class="action-btn" id="btn-mute">🔊</button>
     </div>
   </div>
@@ -228,7 +230,8 @@ const T = {
     insufficient: 'НЕДОСТАТОЧНО', need: 'Нужно ',
     prestige_done: 'Теперь доход x', ok: 'ОК', cool: 'КРУТО',
     tab_game: 'Игра', tab_records: 'Рекорды', tab_upgrades: 'Апгрейды',
-    buy_spawn: 'Появить'
+    buy_spawn: 'Появить',
+    remove_ads: 'Без рекламы'
   },
   en: {
     title: 'COSMIC ALLIANCE',
@@ -248,7 +251,8 @@ const T = {
     insufficient: 'INSUFFICIENT', need: 'Need ',
     prestige_done: 'Now income x', ok: 'OK', cool: 'AWESOME',
     tab_game: 'Game', tab_records: 'Records', tab_upgrades: 'Upgrades',
-    buy_spawn: 'Spawn'
+    buy_spawn: 'Spawn',
+    remove_ads: 'No Ads'
   }
 };
 
@@ -256,6 +260,8 @@ const T = {
 let ysdk = null;
 let player = null;
 let leaderboardApi = null;
+let payments = null;
+let noAdsPurchased = false;
 
 function getLang() {
   if (typeof ysdk !== 'undefined' && ysdk && ysdk.environment && ysdk.environment.i18n && ysdk.environment.i18n.lang === 'en') return 'en';
@@ -285,7 +291,15 @@ function initYandexSDK() {
       if (ysdk.features && ysdk.features.LoadingAPI) ysdk.features.LoadingAPI.ready();
       let p1 = ysdk.getPlayer().then(_p => { player = _p; }).catch(() => {});
       let p2 = ysdk.getLeaderboards().then(_lb => { leaderboardApi = _lb; }).catch(() => {});
-      Promise.all([p1, p2]).then(() => resolve());
+      let p3 = ysdk.getPayments({signed: true}).then(_payments => {
+        payments = _payments;
+        return payments.getPurchases();
+      }).then(purchases => {
+        if (purchases && purchases.some(p => p.productID === 'no_ads')) {
+          noAdsPurchased = true;
+        }
+      }).catch(() => {});
+      Promise.all([p1, p2, p3]).then(() => resolve());
     }).catch(() => resolve());
   });
 }
@@ -896,6 +910,11 @@ document.getElementById('modal-cancel').addEventListener('click', () => {
 
 // ========== ADS ==========
 function showRewardedAd() {
+  if (noAdsPurchased) {
+    doublePointsActive = true;
+    showModal(lang === 'en' ? '2X POINTS' : '2x ОЧКИ', lang === 'en' ? 'Next merge gives double points!' : 'Следующее слияние даёт x2 очков!', t('cool'));
+    return;
+  }
   if (!ysdk || !ysdk.adv || !ysdk.adv.showRewardedVideo) {
     // Fallback for testing
     doublePointsActive = true;
@@ -916,6 +935,7 @@ function showRewardedAd() {
 }
 
 function showInterstitialAd() {
+  if (noAdsPurchased) return;
   if (!ysdk || !ysdk.adv || !ysdk.adv.showFullscreenAdv) return;
   ysdk.adv.showFullscreenAdv({
     callbacks: {
@@ -1105,6 +1125,16 @@ if (!ysdk) {
   // Will check again after SDK init
 }
 
+// Remove Ads button
+document.getElementById('btn-remove-ads').addEventListener('click', () => {
+  if (!payments) return;
+  payments.purchase({id: 'no_ads'}).then(() => {
+    noAdsPurchased = true;
+    document.getElementById('btn-remove-ads').style.display = 'none';
+    showBanner(lang === 'en' ? 'Ads removed! Thank you!' : 'Реклама отключена! Спасибо!');
+  }).catch(() => {});
+});
+
 // Daily challenge button
 document.getElementById('btn-daily').addEventListener('click', () => {
   startDailyChallenge();
@@ -1171,6 +1201,16 @@ function gameInit() {
   // Update ad button visibility
   const adBtn = document.getElementById('btn-ad');
   if (adBtn && !ysdk) adBtn.style.display = 'none';
+
+  // Remove Ads button visibility
+  const removeAdsBtn = document.getElementById('btn-remove-ads');
+  if (removeAdsBtn) {
+    if (noAdsPurchased || !payments) {
+      removeAdsBtn.style.display = 'none';
+    } else {
+      removeAdsBtn.style.display = '';
+    }
+  }
 
   // Start Yandex Gameplay API
   if (ysdk && ysdk.features && ysdk.features.GameplayAPI) ysdk.features.GameplayAPI.start();
