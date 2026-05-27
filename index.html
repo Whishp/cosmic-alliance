@@ -35,8 +35,8 @@
   #app { height: 100vh; display: flex; flex-direction: column; padding-top: env(safe-area-inset-top, 44px); padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 72px); position: relative; z-index: 1; }
 
   /* HUD */
-  #hud { display: flex; justify-content: center; gap: 8px; padding: 12px 16px; flex-wrap: wrap; }
-  .hud-pill { background: var(--glass); border-radius: 20px; padding: 8px 14px; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; border: 0.5px solid rgba(255,255,255,0.06); white-space: nowrap; }
+  #hud { display: flex; justify-content: center; gap: 8px; padding: 12px 16px; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .hud-pill { background: var(--glass); border-radius: 20px; padding: 8px 12px; display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; border: 0.5px solid rgba(255,255,255,0.06); white-space: nowrap; flex-shrink: 0; }
   .hud-pill.gold { color: var(--gold); }
   .hud-pill.cyan { color: var(--accent); }
   .hud-pill.muted { color: var(--text2); }
@@ -70,7 +70,7 @@
   .confetti { position: fixed; width: 10px; height: 20px; top: 0; z-index: 300; pointer-events: none; animation: confettiFall 3s ease-in forwards; }
 
   /* Buttons */
-  #action-row { display: flex; gap: 8px; width: 100%; max-width: 360px; padding: 0 16px; flex-wrap: wrap; }
+  #action-row { display: flex; gap: 8px; width: 100%; max-width: 360px; padding: 0 16px; }
   .action-btn { flex: 1; min-width: 90px; height: 44px; border-radius: 12px; border: none; color: white; font-family: inherit; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: transform 0.1s; }
   .action-btn:active { transform: scale(0.95); }
   #btn-ad { background: linear-gradient(135deg, var(--accent), #0088cc); box-shadow: 0 4px 16px rgba(0, 229, 255, 0.2); }
