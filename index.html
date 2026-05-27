@@ -92,6 +92,19 @@
   .tab-item.active { color: var(--accent); }
   .tab-icon { font-size: 24px; }
 
+  /* Views */
+  .view { display: none; flex-direction: column; height: 100%; width: 100%; max-width: 480px; margin: 0 auto; padding: 16px; overflow-y: auto; }
+  .view.active { display: flex; }
+  .view-title { font-size: 24px; font-weight: 800; color: var(--accent); margin-bottom: 20px; text-align: center; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 15px rgba(0,229,255,0.3); }
+  .records-container { background: var(--surface); border: 1px solid rgba(0,229,255,0.15); border-radius: 20px; padding: 16px; flex: 1; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+  .records-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+  .records-table th { padding: 12px 8px; border-bottom: 1px solid rgba(255,255,255,0.1); color: var(--text2); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+  .records-table td { padding: 12px 8px; border-bottom: 0.5px solid rgba(255,255,255,0.05); }
+  .records-table tr:last-child td { border-bottom: none; }
+  .records-table tbody tr:hover { background: rgba(0,229,255,0.05); }
+  .record-rank { font-weight: 800; color: var(--gold); }
+  .record-score { font-weight: 700; color: white; }
+
   /* Modal */
   .modal-overlay { position: fixed; inset: 0; background: rgba(5,5,16,0.8); z-index: 200; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; backdrop-filter: blur(10px); }
   .modal-overlay.show { opacity: 1; pointer-events: all; }
@@ -131,6 +144,8 @@
     #status-bar { display: none; }
     #desktop-nav { display: flex; width: 100%; max-width: 1000px; }
     #app { max-width: 1000px; width: 100%; height: calc(100vh - 60px); padding-bottom: 0; }
+    .view { max-width: 1000px; flex-direction: row; flex-wrap: wrap; justify-content: center; align-content: flex-start;}
+    #view-records .records-container, #view-upgrades .records-container { width: 100%; max-width: 800px; margin: 0 auto; }
     #board { max-width: 480px; gap: 10px; }
     .cell { font-size: 28px; border-radius: 16px; }
     #board-area { padding-bottom: 32px; }
@@ -153,6 +168,7 @@
 <div id="status-bar"><span data-i18n="title">КОСМИЧЕСКИЙ АЛЬЯНС</span></div>
 
 <div id="app">
+  <div id="view-game" class="view active">
   <div id="hud">
     <div class="hud-pill gold">🏆 <span data-i18n="score">СЧЁТ</span>: <span id="score">0</span></div>
     <div class="hud-pill cyan">✨ <span data-i18n="merges">СЛИЯНИЯ</span>: <span id="merges">0</span></div>
@@ -179,6 +195,33 @@
       <button class="action-btn" id="btn-prestige">✦ <span data-i18n="prestige">Престиж</span></button>
       <button class="action-btn" id="btn-remove-ads">🚫 <span data-i18n="remove_ads">Без рекламы</span></button>
       <button class="action-btn" id="btn-mute">🔊</button>
+    </div>
+  </div>
+  </div>
+
+  <div id="view-records" class="view">
+    <div class="view-title" data-i18n="tab_records">Рекорды</div>
+    <div class="records-container">
+      <table class="records-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th data-i18n="col_score">Очки</th>
+            <th data-i18n="col_merges">Слияния</th>
+            <th data-i18n="col_best_tile">Лучшая плитка</th>
+            <th data-i18n="col_date">Дата</th>
+          </tr>
+        </thead>
+        <tbody id="records-tbody">
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="view-upgrades" class="view">
+    <div class="view-title" data-i18n="tab_upgrades">Апгрейды</div>
+    <div class="records-container" style="display: flex; align-items: center; justify-content: center;">
+      <h2 data-i18n="soon" style="color: var(--text2);">Скоро...</h2>
     </div>
   </div>
 </div>
@@ -231,7 +274,9 @@ const T = {
     prestige_done: 'Теперь доход x', ok: 'ОК', cool: 'КРУТО',
     tab_game: 'Игра', tab_records: 'Рекорды', tab_upgrades: 'Апгрейды',
     buy_spawn: 'Появить',
-    remove_ads: 'Без рекламы'
+    remove_ads: 'Без рекламы',
+    col_score: 'Очки', col_merges: 'Слияния', col_best_tile: 'Лучшая плитка', col_date: 'Дата',
+    soon: 'Скоро...', empty_records: 'Нет рекордов'
   },
   en: {
     title: 'COSMIC ALLIANCE',
@@ -252,7 +297,9 @@ const T = {
     prestige_done: 'Now income x', ok: 'OK', cool: 'AWESOME',
     tab_game: 'Game', tab_records: 'Records', tab_upgrades: 'Upgrades',
     buy_spawn: 'Spawn',
-    remove_ads: 'No Ads'
+    remove_ads: 'No Ads',
+    col_score: 'Score', col_merges: 'Merges', col_best_tile: 'Best Tile', col_date: 'Date',
+    soon: 'Coming soon...', empty_records: 'No records yet'
   }
 };
 
@@ -789,6 +836,30 @@ function showConfetti() {
   }
 }
 
+// ========== RECORDS ==========
+function saveToRecords(score, merges, maxTier) {
+  let records = [];
+  try {
+    const stored = localStorage.getItem('cosmic_records');
+    if (stored) records = JSON.parse(stored);
+  } catch (e) {}
+
+  records.push({
+    score: score,
+    merges: merges,
+    bestTile: maxTier,
+    date: Date.now()
+  });
+
+  // Sort descending by score
+  records.sort((a, b) => b.score - a.score);
+
+  // Keep top 10
+  records = records.slice(0, 10);
+
+  localStorage.setItem('cosmic_records', JSON.stringify(records));
+}
+
 // ========== BANNER ==========
 let bannerTimeout = null;
 function showBanner(msg) {
@@ -812,6 +883,11 @@ function gameOver() {
     ysdk.isAvailableMethod('leaderboards.setLeaderboardScore').then(avail => {
       if (avail) leaderboardApi.setLeaderboardScore('MainBoard', score);
     }).catch(() => {});
+  }
+
+  // Save to local records
+  if (!isDailyChallenge && score > 0) {
+    saveToRecords(score, merges, maxUnlockedTier);
   }
 
   const overlay = document.getElementById('gameover-overlay');
@@ -1165,11 +1241,82 @@ document.getElementById('buy-x1').addEventListener('click', () => buySpawn(1, 1)
 document.getElementById('buy-x10').addEventListener('click', () => buySpawn(10, 0.9));
 document.getElementById('buy-x100').addEventListener('click', () => buySpawn(100, 0.75));
 
+function renderRecords() {
+  const tbody = document.getElementById('records-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  let records = [];
+  try {
+    const stored = localStorage.getItem('cosmic_records');
+    if (stored) records = JSON.parse(stored);
+  } catch (e) {}
+
+  if (records.length === 0) {
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = 5;
+    td.style.textAlign = 'center';
+    td.style.padding = '24px';
+    td.textContent = t('empty_records');
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+    return;
+  }
+
+  records.forEach((rec, index) => {
+    const tr = document.createElement('tr');
+
+    // Rank
+    const tdRank = document.createElement('td');
+    tdRank.className = 'record-rank';
+    tdRank.textContent = index + 1;
+    tr.appendChild(tdRank);
+
+    // Score
+    const tdScore = document.createElement('td');
+    tdScore.className = 'record-score';
+    tdScore.textContent = format(rec.score);
+    tr.appendChild(tdScore);
+
+    // Merges
+    const tdMerges = document.createElement('td');
+    tdMerges.textContent = rec.merges;
+    tr.appendChild(tdMerges);
+
+    // Best Tile
+    const tdTile = document.createElement('td');
+    const tIdx = Math.min(rec.bestTile, MAX_TIER);
+    tdTile.innerHTML = `<span style="color:${COLORS[tIdx]}">${TIERS[tIdx]}</span> (T${tIdx+1})`;
+    tr.appendChild(tdTile);
+
+    // Date
+    const tdDate = document.createElement('td');
+    const d = new Date(rec.date);
+    tdDate.textContent = d.toLocaleDateString();
+    tr.appendChild(tdDate);
+
+    tbody.appendChild(tr);
+  });
+}
+
 // Tab buttons (desktop nav + mobile tabs)
 document.querySelectorAll('[data-tab]').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('[data-tab]').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
+    const tabName = btn.getAttribute('data-tab');
+
+    // Update tab active states
+    document.querySelectorAll(`[data-tab]`).forEach(b => b.classList.remove('active'));
+    document.querySelectorAll(`[data-tab="${tabName}"]`).forEach(b => b.classList.add('active'));
+
+    // Update view active states
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    const targetView = document.getElementById(`view-${tabName}`);
+    if (targetView) targetView.classList.add('active');
+
+    if (tabName === 'records') {
+      renderRecords();
+    }
   });
 });
 
