@@ -125,28 +125,6 @@
   #gameover-overlay .go-btn:active { transform: scale(0.95); }
   @keyframes goPop { 0% { transform: scale(0); } 100% { transform: scale(1); } }
 
-  /* Screen shake and particles */
-  @keyframes screenShake {
-    0% { transform: translate(0, 0) rotate(0deg); }
-    20% { transform: translate(-3px, 2px) rotate(-1deg); }
-    40% { transform: translate(3px, -2px) rotate(1deg); }
-    60% { transform: translate(-2px, -3px) rotate(0deg); }
-    80% { transform: translate(2px, 3px) rotate(1deg); }
-    100% { transform: translate(0, 0) rotate(0deg); }
-  }
-  .shake {
-    animation: screenShake 0.3s ease-in-out;
-  }
-
-  .merge-particle {
-    position: absolute;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    pointer-events: none;
-    z-index: 250;
-  }
-
   /* Desktop */
   @media (min-width: 900px) {
     body { display: flex; flex-direction: column; align-items: center; }
@@ -666,10 +644,6 @@ function doMerge(r1, c1, r2, c2, tier, callback) {
   board[r2][c2] = nextTier;
 
   Sound.merge(nextTier);
-  showMergeParticles(r2, c2, nextTier);
-  if (nextTier >= 3) { // Tier 4 is index 3
-    shakeScreen();
-  }
 
   // Track max tier
   if (nextTier > maxUnlockedTier) {
@@ -797,53 +771,6 @@ function showFloat(r, c, text) {
   ft.style.transform = 'translateX(-50%)';
   document.body.appendChild(ft);
   setTimeout(() => ft.remove(), 700);
-}
-
-// ========== MERGE PARTICLES & SHAKE ==========
-function showMergeParticles(r, c, tier) {
-  const cells = document.querySelectorAll('.cell');
-  const idx = r * BOARD_SIZE + c;
-  const cell = cells[idx];
-  if (!cell) return;
-  const rect = cell.getBoundingClientRect();
-  const centerX = rect.left + rect.width / 2;
-  const centerY = rect.top + rect.height / 2;
-
-  const color = COLORS[Math.min(tier, COLORS.length - 1)];
-  const numParticles = 12 + Math.floor(Math.random() * 5); // 12-16 particles
-
-  for (let i = 0; i < numParticles; i++) {
-    const p = document.createElement('div');
-    p.className = 'merge-particle';
-    p.style.backgroundColor = color;
-    p.style.boxShadow = `0 0 10px ${color}`;
-    p.style.left = (centerX - 4) + 'px'; // -4 to center the 8px particle
-    p.style.top = (centerY - 4) + 'px';
-    document.body.appendChild(p);
-
-    const angle = Math.random() * Math.PI * 2;
-    const distance = 40 + Math.random() * 60;
-    const tx = Math.cos(angle) * distance;
-    const ty = Math.sin(angle) * distance;
-
-    p.animate([
-      { transform: 'translate(0, 0) scale(1)', opacity: 1 },
-      { transform: `translate(${tx}px, ${ty}px) scale(0)`, opacity: 0 }
-    ], {
-      duration: 400 + Math.random() * 300,
-      easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
-      fill: 'forwards'
-    }).onfinish = () => p.remove();
-  }
-}
-
-function shakeScreen() {
-  const app = document.getElementById('app');
-  if (!app) return;
-  app.classList.remove('shake');
-  void app.offsetWidth; // force reflow
-  app.classList.add('shake');
-  setTimeout(() => app.classList.remove('shake'), 300);
 }
 
 // ========== CONFETTI ==========
