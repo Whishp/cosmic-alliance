@@ -392,6 +392,9 @@ function saveGame() {
 function loadGame() {
   const s = localStorage.getItem('alliance_save');
   if (s) {
+    isGameOver = false;
+    const overlay = document.getElementById('gameover-overlay');
+    if (overlay) overlay.classList.remove('show');
     try {
       const d = JSON.parse(s);
       board = d.board || board;
@@ -511,6 +514,10 @@ function hasPossibleMerges() {
 }
 
 function initBoard() {
+  isGameOver = false;
+  const overlay = document.getElementById('gameover-overlay');
+  if (overlay) overlay.classList.remove('show');
+
   board = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
   // Fill ~70% with random starting pieces
   for (let r = 0; r < BOARD_SIZE; r++)
@@ -802,6 +809,8 @@ function showBanner(msg) {
 
 // ========== GAME OVER ==========
 function gameOver() {
+  if (!localStorage.getItem('alliance_tutorial_done')) return;
+
   isGameOver = true;
   Sound.gameOver();
 
@@ -1175,6 +1184,10 @@ document.querySelectorAll('[data-tab]').forEach(btn => {
 
 // ========== INIT ==========
 function gameInit() {
+  isGameOver = false;
+  const overlay = document.getElementById('gameover-overlay');
+  if (overlay) overlay.classList.remove('show');
+
   applyLocalization();
   createBackground();
   loadGame();
