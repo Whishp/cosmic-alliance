@@ -231,7 +231,8 @@ const T = {
     prestige_done: 'Теперь доход x', ok: 'ОК', cool: 'КРУТО',
     tab_game: 'Игра', tab_records: 'Рекорды', tab_upgrades: 'Апгрейды',
     buy_spawn: 'Появить',
-    remove_ads: 'Без рекламы'
+    remove_ads: 'Без рекламы',
+    save_found_title: 'СОХРАНЕННАЯ ИГРА', save_found_text: 'Найдено сохранение. Продолжить?', continue_game: 'ПРОДОЛЖИТЬ', new_game: 'НОВАЯ ИГРА'
   },
   en: {
     title: 'COSMIC ALLIANCE',
@@ -252,7 +253,8 @@ const T = {
     prestige_done: 'Now income x', ok: 'OK', cool: 'AWESOME',
     tab_game: 'Game', tab_records: 'Records', tab_upgrades: 'Upgrades',
     buy_spawn: 'Spawn',
-    remove_ads: 'No Ads'
+    remove_ads: 'No Ads',
+    save_found_title: 'SAVED GAME', save_found_text: 'Save found. Continue?', continue_game: 'CONTINUE', new_game: 'NEW GAME'
   }
 };
 
@@ -671,6 +673,8 @@ function doMerge(r1, c1, r2, c2, tier, callback) {
   const cells = document.querySelectorAll('.cell');
   if (cells[idx]) cells[idx].classList.add('merged');
 
+  saveGame();
+
   if (callback) callback();
 }
 
@@ -818,6 +822,8 @@ function gameOver() {
   const scoreEl = document.getElementById('go-score');
   if (scoreEl) scoreEl.textContent = t('score_go') + format(score);
   if (overlay) overlay.classList.add('show');
+
+  localStorage.removeItem('alliance_save');
 }
 
 function restartGame() {
@@ -1180,19 +1186,29 @@ function gameInit() {
   loadGame();
 
   // Check if board is empty / new game
-  if (board.flat().every(x => x === null)) {
+  const isEmpty = board.flat().every(x => x === null);
+  if (isEmpty) {
     initBoard();
+    if (!localStorage.getItem('alliance_tutorial_done')) {
+      showTutorial(); // Only show tutorial if it's a new game
+    }
   } else {
-    renderBoard();
-    updateHUD();
-    updateProgressBar();
-  }
-
-  // Tutorial on first play
-  if (!localStorage.getItem('alliance_tutorial_done')) {
-    showTutorial();
-  } else {
-    checkOfflineIncome();
+    showModal(t('save_found_title'), t('save_found_text'), t('continue_game'), {
+      cancelLabel: t('new_game'),
+      callback: () => {
+        hideModal();
+        renderBoard();
+        updateHUD();
+        updateProgressBar();
+        if (localStorage.getItem('alliance_tutorial_done')) {
+          checkOfflineIncome();
+        }
+      },
+      cancelCallback: () => {
+        hideModal();
+        restartGame();
+      }
+    });
   }
 
   // Start hint timer
