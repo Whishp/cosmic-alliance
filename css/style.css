@@ -24,6 +24,18 @@
 
   /* App */
   #app { height: 100vh; display: flex; flex-direction: column; padding-top: env(safe-area-inset-top, 44px); padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 200px); position: relative; z-index: 1; }
+  .view { display: none; flex-direction: column; height: 100%; width: 100%; }
+  .view.active { display: flex; }
+
+  /* Records */
+  #view-records { align-items: center; justify-content: center; padding: 24px; }
+  .records-panel { background: var(--surface); border: 1px solid rgba(0,229,255,0.15); border-radius: 24px; width: 100%; max-width: 400px; padding: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); display: flex; flex-direction: column; gap: 16px; }
+  .records-title { font-size: 24px; font-weight: 800; color: var(--accent); text-align: center; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 2px; }
+  .record-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: rgba(30,30,60,0.4); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); }
+  .record-label { font-size: 14px; font-weight: 600; color: var(--text2); }
+  .record-value { font-size: 18px; font-weight: 700; }
+  .record-value.gold { color: var(--gold); }
+  .record-value.cyan { color: var(--accent); }
 
   /* HUD */
   #hud { display: flex; justify-content: center; gap: 8px; padding: 12px 16px; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }

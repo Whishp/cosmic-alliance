@@ -22,7 +22,8 @@
 <div id="status-bar"><span data-i18n="title">КОСМИЧЕСКИЙ АЛЬЯНС</span></div>
 
 <div id="app">
-  <div id="hud">
+  <div id="view-game" class="view active">
+    <div id="hud">
     <div class="hud-pill gold">🏆 <span data-i18n="score">СЧЁТ</span>: <span id="score">0</span></div>
     <div class="hud-pill cyan">✨ <span data-i18n="merges">СЛИЯНИЯ</span>: <span id="merges">0</span></div>
     <div class="hud-pill muted">⭐ <span data-i18n="highscore">РЕКОРД</span>: <span id="highscore">0</span></div>
@@ -49,6 +50,29 @@
       <button class="action-btn" id="btn-remove-ads">🚫 <span data-i18n="remove_ads">Без рекламы</span></button>
       <button class="action-btn" id="btn-mute">🔊</button>
     </div>
+  </div>
+  </div>
+
+  <div id="view-records" class="view" style="display:none">
+    <div class="records-panel">
+      <div class="records-title" data-i18n="tab_records">Рекорды</div>
+      <div class="record-item">
+        <div class="record-label" data-i18n="record_highscore">Лучший счёт</div>
+        <div class="record-value gold" id="rec-highscore">0</div>
+      </div>
+      <div class="record-item">
+        <div class="record-label" data-i18n="record_total_merges">Всего слияний</div>
+        <div class="record-value cyan" id="rec-merges">0</div>
+      </div>
+      <div class="record-item">
+        <div class="record-label" data-i18n="record_max_tier">Макс. уровень</div>
+        <div class="record-value" id="rec-tier">-</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="view-upgrades" class="view" style="display:none">
+    <!-- Upgrades placeholder -->
   </div>
 </div>
 
