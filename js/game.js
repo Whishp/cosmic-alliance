@@ -1052,4 +1052,15 @@ setTimeout(() => {
     gameInit();
   }
 }, 3000);
+
+// Save on page close / visibility change
+window.addEventListener('beforeunload', () => saveGame());
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    saveGame();
+    if (ysdk && ysdk.features && ysdk.features.GameplayAPI) ysdk.features.GameplayAPI.stop();
+  } else {
+    if (ysdk && ysdk.features && ysdk.features.GameplayAPI) ysdk.features.GameplayAPI.start();
+  }
+});
 }); // DOMContentLoaded
