@@ -155,7 +155,7 @@ const TIER_POINTS = [0, 10, 30, 90, 270, 810, 2430, 7290, 21870, 65610, 196830, 
 
 let board = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
 let selected = null;
-let score = 0, merges = 0, highscore = 0;
+let score = 0, merges = 0, highscore = 0, dailyScore = 0;
 let prestigeLevel = 0, prestigeMultiplier = 1.0;
 let maxUnlockedTier = 3;
 let doublePointsActive = false;
