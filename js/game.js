@@ -21,7 +21,10 @@ const T = {
     prestige_done: 'Теперь доход x', ok: 'ОК', cool: 'КРУТО',
     tab_game: 'Игра', tab_records: 'Рекорды', tab_upgrades: 'Апгрейды',
     buy_spawn: 'Появить',
-    remove_ads: 'Без рекламы'
+    remove_ads: 'Без рекламы',
+    record_highscore: 'Лучший счёт',
+    record_total_merges: 'Всего слияний',
+    record_max_tier: 'Макс. уровень'
   },
   en: {
     title: 'COSMIC ALLIANCE',
@@ -42,7 +45,10 @@ const T = {
     prestige_done: 'Now income x', ok: 'OK', cool: 'AWESOME',
     tab_game: 'Game', tab_records: 'Records', tab_upgrades: 'Upgrades',
     buy_spawn: 'Spawn',
-    remove_ads: 'No Ads'
+    remove_ads: 'No Ads',
+    record_highscore: 'Top Score',
+    record_total_merges: 'Total Merges',
+    record_max_tier: 'Highest Tier'
   }
 };
 
@@ -347,6 +353,23 @@ function renderBoard() {
     }
   }
   updateBuyButtons();
+}
+
+// ========== RECORDS ==========
+function renderRecords() {
+  const recHigh = document.getElementById('rec-highscore');
+  const recMerges = document.getElementById('rec-merges');
+  const recTier = document.getElementById('rec-tier');
+
+  if (recHigh) recHigh.textContent = format(highscore);
+  if (recMerges) recMerges.textContent = format(merges);
+  if (recTier) {
+    if (maxUnlockedTier >= 0 && maxUnlockedTier < TIERS.length) {
+      recTier.textContent = `${TIERS[maxUnlockedTier]} (T${maxUnlockedTier + 1})`;
+    } else {
+      recTier.textContent = '-';
+    }
+  }
 }
 
 // ========== HUD ==========
@@ -996,8 +1019,34 @@ document.getElementById('buy-x100').addEventListener('click', () => buySpawn(100
 // Tab buttons (desktop nav + mobile tabs)
 document.querySelectorAll('[data-tab]').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('[data-tab]').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
+    const tabName = btn.getAttribute('data-tab');
+
+    // Update active state on all tab buttons
+    document.querySelectorAll('[data-tab]').forEach(b => {
+      if (b.getAttribute('data-tab') === tabName) {
+        b.classList.add('active');
+      } else {
+        b.classList.remove('active');
+      }
+    });
+
+    // Hide all views
+    document.querySelectorAll('.view').forEach(v => {
+      v.classList.remove('active');
+      v.style.display = 'none';
+    });
+
+    // Show selected view
+    const viewName = tabName === 'upgrades' ? 'game' : tabName;
+    const viewEl = document.getElementById('view-' + viewName);
+    if (viewEl) {
+      viewEl.classList.add('active');
+      viewEl.style.display = '';
+    }
+
+    if (tabName === 'records') {
+      renderRecords();
+    }
   });
 });
 
