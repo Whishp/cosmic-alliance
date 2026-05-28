@@ -439,6 +439,23 @@ function handleCell(r, c) {
   }
 }
 
+// ========== EFFECTS ==========
+function shakeScreen(intensity) {
+  const app = document.getElementById('app');
+  if (!app) return;
+
+  app.classList.remove('shake', 'small', 'big');
+  // force a reflow
+  void app.offsetWidth;
+
+  app.classList.add('shake', intensity);
+
+  app.addEventListener('animationend', function handler() {
+    app.classList.remove('shake', intensity);
+    app.removeEventListener('animationend', handler);
+  }, {once: true});
+}
+
 // ========== MERGE ==========
 function doMerge(r1, c1, r2, c2, tier, callback) {
   board[r1][c1] = null;
@@ -452,6 +469,9 @@ function doMerge(r1, c1, r2, c2, tier, callback) {
     maxUnlockedTier = nextTier;
     showConfetti();
     showBanner(t('achievement') + ': ' + t('unlocked_tier') + (nextTier + 1));
+    shakeScreen('big');
+  } else {
+    shakeScreen('small');
   }
 
   // Calculate points
