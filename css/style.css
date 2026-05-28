@@ -14,6 +14,17 @@
   #bg-layer { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
   .orbit { position: absolute; border-radius: 50%; border: 1px solid rgba(0, 229, 255, 0.08); }
 
+  /* Star Field */
+  .star-field { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+  .star { position: absolute; border-radius: 50%; background: white; animation-name: starDrift; animation-timing-function: linear; animation-iteration-count: infinite; }
+  .star-bg { width: 1.5px; height: 1.5px; opacity: 0.35; }
+  .star-mid { width: 2.5px; height: 2.5px; opacity: 0.55; }
+  .star-fg { width: 3.5px; height: 3.5px; opacity: 0.75; }
+  @keyframes starDrift {
+    from { transform: translateX(0); }
+    to { transform: translateX(-100vw); }
+  }
+
   /* Desktop Nav */
   #desktop-nav { display: none; padding: 16px 32px; gap: 8px; border-bottom: 0.5px solid rgba(255,255,255,0.06); }
   .nav-btn { padding: 10px 24px; border-radius: 10px; background: transparent; border: none; color: var(--text2); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }

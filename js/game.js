@@ -941,6 +941,34 @@ function showTutorial() {
   );
 }
 
+// ========== BACKGROUND STARS ==========
+function createStarField() {
+  const app = document.getElementById('app');
+  if (!app) return;
+
+  const starField = document.createElement('div');
+  starField.className = 'star-field';
+
+  const addStars = (layerClass, count, minDur, maxDur) => {
+    for (let i = 0; i < count; i++) {
+      const star = document.createElement('div');
+      star.className = `star ${layerClass}`;
+      star.style.left = (Math.random() * 100) + 'vw';
+      star.style.top = (Math.random() * 100) + 'vh';
+      const dur = minDur + Math.random() * (maxDur - minDur);
+      star.style.animationDuration = dur + 's';
+      star.style.animationDelay = '-' + (Math.random() * dur) + 's';
+      starField.appendChild(star);
+    }
+  };
+
+  addStars('star-bg', 30, 40, 60);
+  addStars('star-mid', 20, 25, 40);
+  addStars('star-fg', 10, 15, 25);
+
+  app.insertBefore(starField, app.firstChild);
+}
+
 // ========== BACKGROUND ORBITS ==========
 function createBackground() {
   const bg = document.getElementById('bg-layer');
@@ -1057,6 +1085,7 @@ function gameInit() {
   gameInited = true;
   applyLocalization();
   createBackground();
+  createStarField();
   loadGame();
 
   // Check if board is empty / new game
