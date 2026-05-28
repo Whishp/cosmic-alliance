@@ -718,8 +718,8 @@ function showRewardedAd() {
         doublePointsActive = true;
         showModal(lang === 'en' ? '2X POINTS' : '2x ОЧКИ', lang === 'en' ? 'Next merge gives double points!' : 'Следующее слияние даёт x2 очков!', t('cool'));
       },
-      onClose: () => { isMuted = false; },
-      onError: () => { isMuted = false; }
+      onClose: () => { isMuted = localStorage.getItem('cosmic_muted') === '1'; },
+      onError: () => { isMuted = localStorage.getItem('cosmic_muted') === '1'; }
     }
   });
 }
@@ -730,8 +730,8 @@ function showInterstitialAd() {
   ysdk.adv.showFullscreenAdv({
     callbacks: {
       onOpen: () => { isMuted = true; },
-      onClose: () => { isMuted = false; },
-      onError: () => { isMuted = false; }
+      onClose: () => { isMuted = localStorage.getItem('cosmic_muted') === '1'; },
+      onError: () => { isMuted = localStorage.getItem('cosmic_muted') === '1'; }
     }
   });
 }
@@ -760,8 +760,7 @@ function startDailyChallenge() {
 
 function showDailyComplete() {
   const bonusPts = 5000;
-  highscore += bonusPts;
-  localStorage.setItem('cosmic_highscore', highscore.toString());
+  // dailyScore is separate, doesn't inflate permanent highscore
   localStorage.setItem('lastDailyChallenge', new Date().toISOString().split('T')[0]);
   saveCloudData();
   showConfetti();
@@ -810,9 +809,13 @@ function buySpawn(count, discount) {
   }
   score -= cost;
   Sound.click();
+  isProcessing = true;
   for (let i = 0; i < count; i++) spawnRandom();
   // Check chains after spawning
-  checkChainReactions(() => { endTurn(); });
+  checkChainReactions(() => {
+    isProcessing = false;
+    endTurn();
+  });
 }
 
 function updateBuyButtons() {
@@ -964,7 +967,10 @@ document.querySelectorAll('[data-tab]').forEach(btn => {
 });
 
 // ========== INIT ==========
+let gameInited = false;
 function gameInit() {
+  if (gameInited) return;
+  gameInited = true;
   applyLocalization();
   createBackground();
   loadGame();
