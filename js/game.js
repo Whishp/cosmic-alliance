@@ -206,13 +206,13 @@ function loadGame() {
       if (d.passedMilestones) passedMilestones = new Set(d.passedMilestones);
     } catch(e) {}
   }
-  // Load from separate keys (used by Phaser version)
+  // Load from separate keys (legacy Phaser version) — only override if higher
   const hs = localStorage.getItem('cosmic_highscore');
   if (hs) highscore = Math.max(highscore, parseInt(hs, 10));
   const pm = localStorage.getItem('prestigeMultiplier');
-  if (pm) prestigeMultiplier = parseFloat(pm);
+  if (pm) prestigeMultiplier = Math.max(prestigeMultiplier, parseFloat(pm));
   const pc = localStorage.getItem('prestigeCount');
-  if (pc) prestigeLevel = parseInt(pc, 10);
+  if (pc) prestigeLevel = Math.max(prestigeLevel, parseInt(pc, 10));
 
   // Muted state
   const m = localStorage.getItem('cosmic_muted');
