@@ -1017,7 +1017,8 @@ document.querySelectorAll('[data-tab]').forEach(btn => {
     });
 
     // Show selected view
-    const viewEl = document.getElementById('view-' + tabName);
+    const viewName = tabName === 'upgrades' ? 'game' : tabName;
+    const viewEl = document.getElementById('view-' + viewName);
     if (viewEl) {
       viewEl.classList.add('active');
       viewEl.style.display = '';
