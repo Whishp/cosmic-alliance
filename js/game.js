@@ -171,6 +171,7 @@ let prestigeLevel = 0, prestigeMultiplier = 1.0;
 let maxUnlockedTier = 3;
 let doublePointsActive = false;
 let isProcessing = false;
+let lastInterstitialTime = 0;
 let comboMultiplier = 1;
 let isDailyChallenge = false;
 let dailyChallengeCompleted = false;
@@ -463,8 +464,10 @@ function doMerge(r1, c1, r2, c2, tier, callback) {
 
   merges++;
 
-  // Interstitial every 10 merges
-  if (merges % 10 === 0) showInterstitialAd();
+  // Interstitial every 10 merges (debounced to avoid overlapping during chains)
+  if (merges % 10 === 0 && Date.now() - lastInterstitialTime > 30000) {
+    showInterstitialAd();
+  }
 
   renderBoard();
   // Animate the merged cell
@@ -738,6 +741,7 @@ function showRewardedAd() {
 function showInterstitialAd() {
   if (noAdsPurchased) return;
   if (!ysdk || !ysdk.adv || !ysdk.adv.showFullscreenAdv) return;
+  lastInterstitialTime = Date.now();
   ysdk.adv.showFullscreenAdv({
     callbacks: {
       onOpen: () => { isMuted = true; },
